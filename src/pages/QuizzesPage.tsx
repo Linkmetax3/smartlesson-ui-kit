@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,11 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Edit3, ClipboardList } from 'lucide-react';
 import { Quiz, QuizQuestion } from '@/types/quiz';
-import { LessonContent } from '@/types/lesson'; // For lesson topic
+import { LessonContent } from '@/types/lesson';
 import { Json } from '@/integrations/supabase/types';
 
 interface QuizRecord extends Quiz {
-  lessonTopic?: string; // To store the topic from the associated lesson plan
+  lessonTopic?: string;
   lessonSubject?: string;
   lessonGrade?: string;
 }
@@ -43,29 +42,51 @@ const fetchLessonDetailsForPlan = async (planId: string): Promise<{ topic: strin
 const fetchQuizzes = async (userId: string | undefined): Promise<QuizRecord[]> => {
   if (!userId) return [];
 
-  // 1. Fetch all quizzes for the user based on RLS (which checks lesson_plans.user_id)
+  // 1. Fetch user's lesson plan IDs first
+  const { data: userLessonPlans, error: plansError } = await supabase
+    .from('lesson_plans')
+    .select('id')
+    .eq('user_id', userId);
+
+  if (plansError) {
+    console.error('Error fetching user lesson plans:', plansError);
+    throw new Error(plansError.message);
+  }
+  if (!userLessonPlans || userLessonPlans.length === 0) {
+    return []; // No lesson plans means no quizzes for this user
+  }
+
+  const planIds = userLessonPlans.map(p => p.id);
+
+  // 2. Fetch quizzes for these plan_ids
   const { data: quizzesData, error: quizzesError } = await supabase
     .from('quizzes')
     .select('id, plan_id, content, parameters, created_at')
-    .order('created_at', { ascending: false }); // RLS will filter by user_id via lesson_plans
+    .in('plan_id', planIds)
+    .order('created_at', { ascending: false });
 
   if (quizzesError) {
-    console.error('Error fetching quizzes:', quizzesError);
+    console.error('Error fetching quizzes for plan IDs:', quizzesError);
     throw new Error(quizzesError.message);
   }
   if (!quizzesData) return [];
 
-  // 2. Fetch lesson details for each quiz
+  // 3. Fetch lesson details for each quiz (enrichment)
   const quizzesWithTopics = await Promise.all(
     quizzesData.map(async (quiz) => {
       let lessonDetails: { topic: string, subject?: string, grade?: string } | null = null;
       if (quiz.plan_id) {
+        // We could potentially pass lesson_plans.content and lesson_plans.parameters directly
+        // if we selected them in step 1 and matched them here, to avoid N+1 calls to fetchLessonDetailsForPlan.
+        // For now, keeping fetchLessonDetailsForPlan for simplicity if it's designed for individual lookups.
+        // Or, optimize by fetching all relevant lesson_plans once and then looking them up locally.
+        // For now, the existing fetchLessonDetailsForPlan is called.
         lessonDetails = await fetchLessonDetailsForPlan(quiz.plan_id);
       }
       return {
         ...quiz,
         content: quiz.content as unknown as QuizQuestion[],
-        parameters: quiz.parameters as Json, // Keep as Json or specify if known
+        parameters: quiz.parameters as Json,
         lessonTopic: lessonDetails?.topic || 'N/A',
         lessonSubject: lessonDetails?.subject,
         lessonGrade: lessonDetails?.grade,
@@ -89,9 +110,6 @@ const QuizzesPage = () => {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">My Quizzes</h1>
         {/* Optional: Add a button to create a quiz directly, though current flow is via lessons */}
-        {/* <Button asChild>
-          <Link to="/quizzes/new"> <PlusCircle className="mr-2 h-4 w-4" /> Create New Quiz </Link>
-        </Button> */}
       </div>
 
       {isLoading && (
@@ -115,8 +133,10 @@ const QuizzesPage = () => {
       )}
 
       {error && (
-        <div className="text-center py-10">
-          <p className="text-red-500">Failed to load quizzes: {error.message}</p>
+        <div className="text-center py-10 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-600 font-semibold">Failed to load quizzes</p>
+          <p className="text-red-500 text-sm mt-1">{error.message}</p>
+          <p className="text-muted-foreground text-xs mt-2">Please try again later. If the issue persists, ensure your connection is stable.</p>
         </div>
       )}
 
@@ -125,11 +145,11 @@ const QuizzesPage = () => {
           <ClipboardList className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold text-muted-foreground mb-2">No Quizzes Found</h2>
           <p className="text-muted-foreground mb-4">
-            Quizzes are generated from lesson plans. Create a lesson plan and generate a quiz for it first.
+            Quizzes are generated from lesson plans. Create a lesson plan and generate a quiz for it first, or check if you have any existing lesson plans.
           </p>
           <Button asChild variant="outline">
-            <Link to="/lessons/new">
-              <PlusCircle className="mr-2 h-4 w-4" /> Create Lesson Plan
+            <Link to="/lessons">
+              <PlusCircle className="mr-2 h-4 w-4" /> View Lesson Plans
             </Link>
           </Button>
         </div>
@@ -151,7 +171,7 @@ const QuizzesPage = () => {
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-sm text-muted-foreground">
-                  {quiz.content.length} question{quiz.content.length !== 1 ? 's' : ''}
+                  {Array.isArray(quiz.content) ? quiz.content.length : 0} question{Array.isArray(quiz.content) && quiz.content.length !== 1 ? 's' : ''}
                 </p>
                 {(quiz.parameters as any)?.learnerLevel && 
                   <p className="text-xs text-muted-foreground mt-1">

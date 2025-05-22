@@ -562,7 +562,7 @@ const NewLessonPage = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="lesson-plan">Lesson Plan</TabsTrigger>
-              <TabsTrigger value="quiz" disabled={!generatedQuiz && !(isGeneratingPreview && activeTab === 'quiz') }>Quiz</TabsTrigger>
+              <TabsTrigger value="quiz">Quiz</TabsTrigger>
             </TabsList>
             <TabsContent value="lesson-plan">
               <LessonPreview 
@@ -573,13 +573,17 @@ const NewLessonPage = () => {
               />
             </TabsContent>
             <TabsContent value="quiz">
-              {isGeneratingPreview && !generatedQuiz && activeTab === 'quiz' ? (
+              {(isGeneratingPreview && activeTab === 'quiz' && !generatedQuiz) ? (
                 <div className="flex justify-center items-center h-64">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="ml-2 text-muted-foreground">Loading Quiz...</p>
                 </div>
               ) : (
-                <QuizTab quizData={generatedQuiz} onQuizSaved={handleQuizSaved} />
+                <QuizTab 
+                  quizData={generatedQuiz} 
+                  onQuizSaved={handleQuizSaved} 
+                  lessonPlanId={generatedLessonPlanId} // Pass lessonPlanId to QuizTab
+                />
               )}
             </TabsContent>
           </Tabs>

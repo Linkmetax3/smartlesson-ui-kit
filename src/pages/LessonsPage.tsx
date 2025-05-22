@@ -77,8 +77,10 @@ const LessonsPage = () => {
       )}
 
       {error && (
-        <div className="text-center py-10">
-          <p className="text-red-500">Failed to load lesson plans: {error.message}</p>
+        <div className="text-center py-10 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-600 font-semibold">Failed to load lesson plans</p>
+          <p className="text-red-500 text-sm mt-1">{error.message}</p>
+           <p className="text-muted-foreground text-xs mt-2">Please try again later. If the issue persists, ensure your connection is stable and you have lesson plans associated with your account.</p>
         </div>
       )}
 
