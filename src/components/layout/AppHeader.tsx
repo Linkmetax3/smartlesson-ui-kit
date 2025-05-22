@@ -1,8 +1,10 @@
+
 import React from 'react';
-import AppLogo from './AppLogo';
-import UserAvatar from './UserAvatar';
-import SyncStatusIndicator from '../ui/SyncStatusIndicator'; // Added import
-import { SidebarTrigger } from "@/components/ui/sidebar"; // From shadcn/ui
+// import AppLogo from './AppLogo'; // AppLogo is not used here
+// import UserAvatar from './UserAvatar'; // Replaced by UserNav
+import UserNav from './UserNav'; // Added UserNav
+import SyncStatusIndicator from '../ui/SyncStatusIndicator';
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Menu } from 'lucide-react';
 
 const AppHeader = () => {
@@ -20,8 +22,8 @@ const AppHeader = () => {
         </div>
         
         <div className="flex items-center space-x-4">
-          <SyncStatusIndicator /> {/* Added SyncStatusIndicator */}
-          <UserAvatar />
+          <SyncStatusIndicator />
+          <UserNav /> {/* Replaced UserAvatar with UserNav */}
         </div>
       </div>
     </header>

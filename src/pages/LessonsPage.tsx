@@ -30,11 +30,10 @@ const fetchLessonPlans = async (userId: string | undefined): Promise<LessonPlanR
     console.error('Error fetching lesson plans:', error);
     throw new Error(error.message);
   }
-  // Cast content to LessonContent
   return (data || []).map(plan => ({
     ...plan,
     content: plan.content as unknown as LessonContent,
-    parameters: plan.parameters, // No change needed if it's already Json or specific type matching parameters
+    parameters: plan.parameters as Json, // Ensure parameters is Json
   })) as LessonPlanRecord[];
 };
 
@@ -43,7 +42,7 @@ const LessonsPage = () => {
   const { data: lessonPlans, isLoading, error } = useQuery<LessonPlanRecord[], Error>({
     queryKey: ['lessonPlans', user?.id],
     queryFn: () => fetchLessonPlans(user?.id),
-    enabled: !!user, // Only run query if user is available
+    enabled: !!user,
   });
 
   return (
@@ -97,30 +96,33 @@ const LessonsPage = () => {
 
       {!isLoading && !error && lessonPlans && lessonPlans.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {lessonPlans.map((plan) => (
-            <Card key={plan.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="truncate">{(plan.content as LessonContent)?.lessonTopic || 'Untitled Lesson'}</CardTitle>
-                <CardDescription>
-                  Created: {new Date(plan.created_at).toLocaleDateString()}
-                  {plan.parameters && (plan.parameters as any)?.subject && ` | Subject: ${(plan.parameters as any).subject}`}
-                  {plan.parameters && (plan.parameters as any)?.grade && ` | Grade: ${(plan.parameters as any).grade}`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {(plan.content as LessonContent)?.learningObjective || 'No learning objective specified.'}
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button asChild variant="outline" size="sm">
-                  <Link to={`/lessons/new?planId=${plan.id}`}>
-                    <Edit3 className="mr-2 h-4 w-4" /> View & Edit
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+          {lessonPlans.map((plan) => {
+            const planParams = plan.parameters as { subject?: string; grade?: string; [key: string]: any } | null;
+            return (
+              <Card key={plan.id} className="flex flex-col">
+                <CardHeader>
+                  <CardTitle className="truncate">{(plan.content as LessonContent)?.lessonTopic || 'Untitled Lesson'}</CardTitle>
+                  <CardDescription>
+                    Created: {new Date(plan.created_at).toLocaleDateString()}
+                    {planParams?.subject && ` | Subject: ${planParams.subject}`}
+                    {planParams?.grade && ` | Grade: ${planParams.grade}`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {(plan.content as LessonContent)?.learningObjective || 'No learning objective specified.'}
+                  </p>
+                </CardContent>
+                <CardFooter>
+                  <Button asChild variant="outline" size="sm" className="w-full">
+                    <Link to={`/lessons/new?planId=${plan.id}`}>
+                      <Edit3 className="mr-2 h-4 w-4" /> View & Edit
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
