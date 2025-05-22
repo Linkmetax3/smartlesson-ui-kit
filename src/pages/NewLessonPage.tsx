@@ -40,7 +40,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { HelpCircle, Loader2, Check, ChevronsUpDown } from 'lucide-react';
-import PouchDB from 'pouchdb-browser';
+// import PouchDB from 'pouchdb-browser';
 
 const subjectList = [
   { value: "Mathematics", label: "Mathematics" },
@@ -72,11 +72,13 @@ const lessonFormSchema = z.object({
 
 type LessonFormValues = z.infer<typeof lessonFormSchema>;
 
+/*
 let localDB: PouchDB.Database | null = null;
 if (typeof window !== 'undefined') {
   localDB = new PouchDB('lesson_plans_local');
 }
-
+*/
+let localDB: any = null; // Keep type for potential future use, but set to null
 
 const NewLessonPage = () => {
   const { user } = useAuth();
@@ -122,6 +124,7 @@ const NewLessonPage = () => {
 
       if (data && data.content) {
         toast({ title: "Success", description: "Lesson plan generated successfully!" });
+        /*
         if (localDB) {
           try {
             await localDB.put({
@@ -137,6 +140,7 @@ const NewLessonPage = () => {
             toast({ variant: "destructive", title: "Local Save Error", description: `Failed to save lesson plan locally: ${pouchDbError.message}` });
           }
         }
+        */
         form.reset();
       } else {
         toast({ variant: "destructive", title: "Empty Response", description: "The lesson generation returned no content." });
