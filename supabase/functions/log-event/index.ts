@@ -1,6 +1,8 @@
 
-import { supabase } from '@/integrations/supabase/admin-client'; // Using admin client
-import { quốc } from '@supabase/supabase-js'
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { supabase } from "../_shared/admin-client.ts"; // Updated import path
+import { getAuth } from "https://deno.land/x/supabase_auth_helpers@v0.1.0/mod.ts";
 
 
 const corsHeaders = {
@@ -8,35 +10,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-Deno.serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { eventType, planId, resourceId } = await req.json();
-    const user = quốc.auth.user(); // Deno.env.get('SUPABASE_AUTH_USER') - this needs to be set if you use RLS based on user_id or get user from token
-
-    // For simplicity, getting user_id from auth header if available, otherwise null.
-    // A more robust solution would involve verifying the JWT.
-    const authHeader = req.headers.get('Authorization');
-    let userId = null;
-    if (authHeader) {
-      try {
-        const jwt = authHeader.replace('Bearer ', '');
-        const { data: { user: authUser } } = await supabase.auth.getUser(jwt);
-        if (authUser) {
-          userId = authUser.id;
-        }
-      } catch (e) {
-        console.warn('Could not get user from JWT for logging event:', e.message);
-      }
-    }
+    const { eventType, planId, resourceId, quizId, metadata: additionalMetadata } = await req.json();
     
-    if (!userId) {
-        console.warn('User ID not available for logging event. Event will be logged without user_id.');
+    // Get user from JWT
+    const { user, error: authError } = await getAuth(req, { supabaseClient: supabase });
+    if (authError || !user) {
+      console.error("Auth error:", authError);
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
 
     if (!eventType) {
       return new Response(JSON.stringify({ error: 'eventType is required' }), {
@@ -44,30 +34,28 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    console.log(`Logging event: ${eventType} for user: ${user.id}`);
 
     const eventData: {
-      user_id?: string;
+      user_id: string;
       event_type: string;
       plan_id?: string;
-      metadata: Record<string, unknown>;
+      quiz_id?: string;
+      metadata?: object;
     } = {
+      user_id: user.id,
       event_type: eventType,
-      metadata: {},
     };
 
-    if (userId) {
-      eventData.user_id = userId;
-    }
-    if (planId) {
-      eventData.plan_id = planId;
-    }
+    if (planId) eventData.plan_id = planId;
+    if (quizId) eventData.quiz_id = quizId;
+
+    let combinedMetadata = { ...additionalMetadata };
     if (resourceId) {
-      eventData.metadata.resourceId = resourceId;
+      combinedMetadata = { ...combinedMetadata, resourceId };
     }
-    
-    // If eventType is 'resource_clicked', resourceId is expected in metadata
-    if (eventType === 'resource_clicked' && !resourceId) {
-        console.warn('resource_clicked event logged without resourceId');
+    if (Object.keys(combinedMetadata).length > 0) {
+        eventData.metadata = combinedMetadata;
     }
 
 
@@ -76,16 +64,18 @@ Deno.serve(async (req: Request) => {
       .insert(eventData);
 
     if (insertError) {
-      console.error('Error logging event:', insertError);
-      throw insertError;
+      console.error('Error logging event in Edge Function:', insertError);
+      throw insertError; // Caught by outer try-catch
     }
+    console.log('Successfully logged event:', eventType, eventData);
 
-    return new Response(JSON.stringify({ success: true, message: 'Event logged' }), {
+    return new Response(JSON.stringify({ message: 'Event logged successfully' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
     });
   } catch (error) {
     console.error('Error in log-event function:', error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
