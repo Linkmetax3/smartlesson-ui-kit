@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -6,18 +5,31 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Loader2 } from 'lucide-react';
-import { ProfileFormValues } from '@/hooks/useProfileData'; // Import the type
+import { Loader2, ChevronDown } from 'lucide-react';
+import { ProfileFormValues } from '@/hooks/useProfileData';
+import { 
+  DropdownMenu, 
+  DropdownMenuCheckboxItem, 
+  DropdownMenuContent, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 interface ProfileFormProps {
   onSubmit: (data: ProfileFormValues) => Promise<void>;
   isSubmitting: boolean;
   initialProfileRole?: string | null;
-  // form instance will be provided by FormProvider in the page component
 }
 
+const subjectOptions = [
+  "Mathematics", "Physical Sciences", "Life Sciences", "Afrikaans", 
+  "English", "IsiXhosa", "Social Sciences", "Geography", 
+  "History", "IT", "CAT", "Life Orientation"
+];
+
 const ProfileForm: React.FC<ProfileFormProps> = ({ onSubmit, isSubmitting, initialProfileRole }) => {
-  const form = useFormContext<ProfileFormValues>(); // Get form methods from context
+  const form = useFormContext<ProfileFormValues>();
 
   return (
     <Card className="w-full max-w-3xl mx-auto">
@@ -26,7 +38,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ onSubmit, isSubmitting, initi
         <CardDescription>Manage your personal information and preferences.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}> {/* Spread form instance here if not using FormProvider from parent */}
+        <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid md:grid-cols-2 gap-6">
               <FormField
@@ -56,12 +68,39 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ onSubmit, isSubmitting, initi
                 control={form.control}
                 name="subjects"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel htmlFor="subjects">Subjects You Teach</FormLabel>
-                    <FormControl>
-                      <Input id="subjects" {...field} placeholder="e.g., Mathematics, History, Physics" aria-invalid={!!form.formState.errors.subjects} />
-                    </FormControl>
-                    <FormDescription>Enter subjects separated by commas.</FormDescription>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Subjects You Teach</FormLabel>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                          {field.value && field.value.length > 0 
+                            ? `${field.value.length} selected` 
+                            : "Select subjects"}
+                          <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-60 overflow-y-auto">
+                        <DropdownMenuLabel>Available Subjects</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {subjectOptions.map((subject) => (
+                          <DropdownMenuCheckboxItem
+                            key={subject}
+                            checked={field.value?.includes(subject)}
+                            onCheckedChange={(checked) => {
+                              const currentSubjects = field.value || [];
+                              if (checked) {
+                                field.onChange([...currentSubjects, subject]);
+                              } else {
+                                field.onChange(currentSubjects.filter((s) => s !== subject));
+                              }
+                            }}
+                          >
+                            {subject}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <FormDescription>Select the subjects you teach.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -124,4 +163,3 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ onSubmit, isSubmitting, initi
 };
 
 export default ProfileForm;
-

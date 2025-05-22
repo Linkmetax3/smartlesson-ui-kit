@@ -14,7 +14,7 @@ type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 // Zod schema for profile form validation
 const profileSchema = z.object({
   full_name: z.string().min(2, "Full name must be at least 2 characters."),
-  subjects: z.string().optional(), // Handled as string in form, converted to array for DB
+  subjects: z.array(z.string()).optional(), // Changed from z.string() to z.array(z.string())
   school_name: z.string().optional(),
   location: z.string().optional(),
   bio: z.string().optional(),
@@ -33,7 +33,7 @@ export const useProfileData = () => {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       full_name: '',
-      subjects: '',
+      subjects: [], // Changed from '' to []
       school_name: '',
       location: '',
       bio: '',
@@ -51,23 +51,24 @@ export const useProfileData = () => {
             .eq('user_id', user.id)
             .single();
 
-          if (error && error.code !== 'PGRST116') { // PGRST116: 0 rows means no profile found yet
+          if (error && error.code !== 'PGRST116') { 
             throw error;
           }
           if (data) {
             setProfile(data);
             form.reset({
               full_name: data.full_name || '',
-              subjects: (data.subjects || []).join(', '), // Convert array to comma-separated string for form
+              subjects: data.subjects || [], // Changed from .join(', ') to direct array or empty array
               school_name: data.school_name || '',
               location: data.location || '',
               bio: data.bio || '',
             });
-          } else if (!error) { // No data and no error means profile doesn't exist
-            setProfile(null); // Ensure profile is null if not found
-             // Optionally prefill full_name from auth if profile is new
+          } else if (!error) { 
+            setProfile(null); 
             if (user.user_metadata?.full_name) {
-              form.reset({ ...form.getValues(), full_name: user.user_metadata.full_name });
+              form.reset({ ...form.getValues(), full_name: user.user_metadata.full_name, subjects: [] });
+            } else {
+              form.reset({ ...form.getValues(), subjects: [] }); // Ensure subjects is an array
             }
           }
         } catch (error: any) {
@@ -76,46 +77,37 @@ export const useProfileData = () => {
             title: "Failed to load profile",
             description: error.message || "Could not fetch your profile data.",
           });
-          setProfile(null); // Ensure profile is null on error
+          setProfile(null); 
         } finally {
           setIsLoadingData(false);
         }
       };
       fetchProfile();
-    } else if (!authLoading) { // No user, or auth still loading
+    } else if (!authLoading) { 
         setIsLoadingData(false);
         setProfile(null);
     }
-  }, [user, authLoading, form, toast]); // form.reset is stable, toast is stable
+  }, [user, authLoading, form, toast]);
 
   const handleProfileUpdate = async (data: ProfileFormValues) => {
     if (!user) return;
     setIsSubmitting(true);
 
-    const subjectsArray = data.subjects ? data.subjects.split(',').map(s => s.trim()).filter(s => s) : [];
-
+    // subjects data is now an array directly from the form
     const updateData: ProfileUpdate = {
-      user_id: user.id, // Ensure user_id is part of the update DTO if it's a new profile (upsert scenario)
+      user_id: user.id, 
       full_name: data.full_name,
-      subjects: subjectsArray,
+      subjects: data.subjects || [], // Use the array directly, ensure it's an array
       school_name: data.school_name || null,
       location: data.location || null,
       bio: data.bio || null,
       updated_at: new Date().toISOString(),
-      // Role is typically not updated here by the user
     };
     
-    // If profile exists, update. If not, insert (upsert logic).
-    // Supabase `update` with `eq` will fail if row doesn't exist.
-    // So, we check if profile existed to decide between insert and update, or use upsert.
-    // For simplicity, let's assume an `upsert` or separate insert/update logic if needed.
-    // Current `profiles` table RLS might need an INSERT policy if we want client-side inserts.
-    // The `handle_new_user` trigger handles initial insert. Subsequent saves are updates.
-
     try {
         const { error } = await supabase
             .from('profiles')
-            .update(updateData) // This assumes the profile row ALREADY EXISTS because of the trigger.
+            .update(updateData) 
             .eq('user_id', user.id);
 
         if (error) throw error;
@@ -125,19 +117,17 @@ export const useProfileData = () => {
             description: "Your profile information has been saved successfully.",
         });
 
-        // Refresh profile data and form after successful update
         const updatedProfileResult = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
         if (updatedProfileResult.data) {
             setProfile(updatedProfileResult.data);
             form.reset({ 
                 full_name: updatedProfileResult.data.full_name || '',
-                subjects: (updatedProfileResult.data.subjects || []).join(', '),
+                subjects: updatedProfileResult.data.subjects || [], // Reset with array
                 school_name: updatedProfileResult.data.school_name || '',
                 location: updatedProfileResult.data.location || '',
                 bio: updatedProfileResult.data.bio || '',
             });
         }
-        // Update Supabase Auth user metadata if full_name changed
         if (session && data.full_name !== session.user.user_metadata.full_name) {
             await supabase.auth.updateUser({ data: { full_name: data.full_name } });
         }
@@ -156,11 +146,10 @@ export const useProfileData = () => {
   return {
     profile,
     form,
-    isLoading: authLoading || isLoadingData, // Combined loading state
+    isLoading: authLoading || isLoadingData, 
     isSubmitting,
     handleProfileUpdate,
-    user, // pass user for checks in page
-    session // pass session for checks in page or if needed elsewhere
+    user, 
+    session 
   };
 };
-
