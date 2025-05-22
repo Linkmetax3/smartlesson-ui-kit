@@ -1,3 +1,4 @@
+
 export const ASSESSMENT_TYPES = ["peer", "self", "teacher"] as const;
 export type AssessmentType = typeof ASSESSMENT_TYPES[number];
 
@@ -34,7 +35,7 @@ export interface LessonContent {
   user_id?: string;
 }
 
-// Ordered list of keys for rendering
+// Ordered list of keys for rendering as per user request
 export const lessonContentKeys: Array<keyof Omit<LessonContent, 'id' | 'grade' | 'date' | 'learnerLevel' | 'user_id'>> = [
   'lessonTopic',
   'themeOfWeek',
@@ -64,3 +65,4 @@ export const lessonSectionTitles: Record<typeof lessonContentKeys[number], strin
   assessmentType: "Primary Assessment Type",
   teacherReflection: "Teacher Reflection (Post-Lesson)",
 };
+

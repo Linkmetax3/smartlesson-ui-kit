@@ -59,7 +59,7 @@ const subjectList = [
   { value: "Life Orientation", label: "Life Orientation" },
 ];
 
-const assessmentTypes = ["peer", "self", "teacher"] as const;
+const assessmentTypes = lessonAssessmentTypes; // Use from types/lesson.ts
 const learnerLevels = ["struggling", "on-track", "advanced"] as const;
 
 const lessonFormSchema = z.object({
@@ -74,13 +74,13 @@ const lessonFormSchema = z.object({
 
 type LessonFormValues = z.infer<typeof lessonFormSchema>;
 
-let localDB: any = null; // Keep type for potential future use, but set to null
+// let localDB: any = null; // Keep type for potential future use, but set to null // This line was already commented, removing for clarity
 
 const NewLessonPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false); // For preview loading state
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false); // Renamed from isSubmitting to avoid confusion
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false); // For LessonPreview's isLoading prop
   const [subjectPopoverOpen, setSubjectPopoverOpen] = useState(false);
   const [generatedLessonPlanId, setGeneratedLessonPlanId] = useState<string | null>(null);
   const [generatedLessonContent, setGeneratedLessonContent] = useState<LessonContent | null>(null);
@@ -102,8 +102,8 @@ const NewLessonPage = () => {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to generate a lesson plan." });
       return;
     }
-    setIsSubmitting(true);
-    setIsGenerating(true); // Start loading for preview
+    setIsSubmittingForm(true);
+    setIsGeneratingPreview(true); // Start loading for preview
     setGeneratedLessonContent(null); // Clear previous preview
     setGeneratedLessonPlanId(null);
 
@@ -111,7 +111,7 @@ const NewLessonPage = () => {
       const payload = {
         user_id: user.id,
         grade: values.grade,
-        date: values.date.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        date: values.date.toISOString().split('T')[0],
         subject: values.subject,
         themeOfWeek: values.themeOfWeek || "",
         notes: values.notes || "",
@@ -119,25 +119,30 @@ const NewLessonPage = () => {
         learnerLevel: values.learnerLevel,
       };
 
+      console.log("Invoking generate-lesson with payload:", payload);
       const { data, error } = await supabase.functions.invoke('generate-lesson', {
         body: payload,
       });
+      console.log("generate-lesson response data:", data);
+      console.log("generate-lesson response error:", error);
+
 
       if (error) throw error;
 
-      if (data && data.content) {
-        toast({ title: "Success", description: "Lesson plan generated successfully!" });
+      if (data && data.content && data.content.id) { // Check for id from generate-lesson
+        toast({ title: "Success", description: "Lesson plan generated successfully! You can now edit it below." });
         
-        const planId = data.content.id || `generated_${Date.now()}`;
+        const planId = data.content.id; // Use ID from the response
         
+        // Ensure all fields of LessonContent are present, providing defaults if necessary
         const lessonData: LessonContent = {
           id: planId,
           lessonTopic: data.content.lessonTopic || "N/A",
           themeOfWeek: data.content.themeOfWeek || values.themeOfWeek || "N/A",
           learningObjective: data.content.learningObjective || "N/A",
-          materialsNeeded: data.content.materialsNeeded || [],
+          materialsNeeded: Array.isArray(data.content.materialsNeeded) ? data.content.materialsNeeded : [],
           introduction: data.content.introduction || "N/A",
-          mainActivities: (data.content.mainActivities || []).map((act: any) => ({
+          mainActivities: (Array.isArray(data.content.mainActivities) ? data.content.mainActivities : []).map((act: any) => ({
              title: act.title || "Activity",
              description: act.description || "No description",
           })) as LessonActivity[],
@@ -152,6 +157,7 @@ const NewLessonPage = () => {
           evaluation: data.content.evaluation || "",
           assessmentType: data.content.assessmentType || values.assessmentType,
           teacherReflection: data.content.teacherReflection || "",
+          // Include original form values that are part of LessonContent type
           grade: values.grade,
           date: values.date.toISOString().split('T')[0],
           learnerLevel: values.learnerLevel,
@@ -162,11 +168,13 @@ const NewLessonPage = () => {
         setGeneratedLessonContent(lessonData);
         
       } else {
-        toast({ variant: "destructive", title: "Empty Response", description: "The lesson generation returned no content." });
+        console.error("generate-lesson returned no content or id:", data);
+        toast({ variant: "destructive", title: "Empty or Invalid Response", description: "The lesson generation returned no content or plan ID." });
         setGeneratedLessonContent(null);
         setGeneratedLessonPlanId(null);
       }
     } catch (error: any) {
+      console.error("Error during lesson generation:", error);
       toast({
         variant: "destructive",
         title: "Generation Failed",
@@ -175,15 +183,15 @@ const NewLessonPage = () => {
       setGeneratedLessonContent(null);
       setGeneratedLessonPlanId(null);
     } finally {
-      setIsSubmitting(false);
-      setIsGenerating(false);
+      setIsSubmittingForm(false);
+      setIsGeneratingPreview(false); // Stop loading for preview
     }
   };
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-8 text-center">Generate New Lesson</h1>
+      <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-3xl"> {/* Increased max-width for better preview space */}
+        <h1 className="text-3xl font-bold mb-8 text-center">Generate New Lesson Plan</h1>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField
@@ -228,7 +236,7 @@ const NewLessonPage = () => {
                             className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
                           >
                             {field.value ? 
-                              new Date(field.value).toLocaleDateString('en-CA')
+                              new Date(field.value).toLocaleDateString('en-CA') // YYYY-MM-DD format
                               : <span>Pick a date</span>}
                           </Button>
                         </FormControl>
@@ -237,7 +245,7 @@ const NewLessonPage = () => {
                         <DatePicker 
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1))}
+                          disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1))} // Allow today
                           initialFocus
                         />
                       </PopoverContent>
@@ -348,7 +356,7 @@ const NewLessonPage = () => {
                       <TooltipContent><p>Any specific notes, objectives, or considerations for this lesson.</p></TooltipContent>
                     </Tooltip>
                   </FormLabel>
-                  <FormControl><Textarea placeholder="e.g., Focus on collaborative learning, prepare visual aids for X." {...field} rows={4} /></FormControl>
+                  <FormControl><Textarea placeholder="e.g., Focus on collaborative learning, prepare visual aids for X." {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -360,7 +368,7 @@ const NewLessonPage = () => {
               render={({ field }) => (
                 <FormItem className="space-y-3">
                   <FormLabel className="flex items-center">
-                    Assessment Type
+                    Primary Assessment Type
                     <Tooltip delayDuration={100}>
                       <TooltipTrigger asChild>
                         <HelpCircle className="h-4 w-4 ml-1.5 text-muted-foreground cursor-help" />
@@ -376,8 +384,8 @@ const NewLessonPage = () => {
                     >
                       {assessmentTypes.map((type) => (
                         <FormItem key={type} className="flex items-center space-x-3 space-y-0">
-                          <FormControl><RadioGroupItem value={type} /></FormControl>
-                          <FormLabel className="font-normal capitalize">{type}</FormLabel>
+                          <FormControl><RadioGroupItem value={type} id={`form-${type}`} /></FormControl>
+                          <FormLabel htmlFor={`form-${type}`} className="font-normal capitalize">{type}</FormLabel>
                         </FormItem>
                       ))}
                     </RadioGroup>
@@ -409,8 +417,8 @@ const NewLessonPage = () => {
                     >
                       {learnerLevels.map((level) => (
                         <FormItem key={level} className="flex items-center space-x-3 space-y-0">
-                          <FormControl><RadioGroupItem value={level} /></FormControl>
-                          <FormLabel className="font-normal capitalize">{level.replace('-', ' ')}</FormLabel>
+                          <FormControl><RadioGroupItem value={level} id={`form-${level}`} /></FormControl>
+                          <FormLabel htmlFor={`form-${level}`} className="font-normal capitalize">{level.replace('-', ' ')}</FormLabel>
                         </FormItem>
                       ))}
                     </RadioGroup>
@@ -420,26 +428,27 @@ const NewLessonPage = () => {
               )}
             />
             
-            <div className="sticky bottom-0 py-4 bg-background/80 backdrop-blur-sm -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="sticky bottom-0 py-4 bg-background/90 backdrop-blur-sm -mx-4 px-4 sm:mx-0 sm:px-0 z-10">
               <Button 
                 type="submit" 
-                disabled={isSubmitting || !form.formState.isValid} 
+                disabled={isSubmittingForm || !form.formState.isDirty || !form.formState.isValid} // Disable if not dirty or invalid
                 className="w-full sm:w-auto"
               >
-                {isSubmitting ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
+                {isSubmittingForm ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating Lesson Plan...</>
                 ) : (
-                  'Generate Plan'
+                  'Generate Lesson Plan'
                 )}
               </Button>
             </div>
           </form>
         </Form>
 
+        {/* Render LessonPreview here */}
         <LessonPreview 
           initialPlanId={generatedLessonPlanId} 
           initialContent={generatedLessonContent}
-          isLoading={isGenerating}
+          isLoading={isGeneratingPreview} // Pass the preview-specific loading state
         />
 
       </div>
