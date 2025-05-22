@@ -29,7 +29,7 @@ import AppLogo from './AppLogo';
 import { cn } from '@/lib/utils';
 
 const mainNavItems = [
-  { title: "Dashboard", href: "/", icon: Home },
+  { title: "Dashboard", href: "/dashboard", icon: Home }, // Updated href
   { title: "Lessons", href: "/lessons", icon: BookOpen },
   { title: "New Lesson", href: "/lessons/new", icon: FilePlus },
   { title: "Quizzes", href: "/quizzes", icon: ClipboardList },
@@ -61,7 +61,7 @@ export function AppSidebar() {
               "w-full justify-start",
               location.pathname === item.href && "bg-primary text-primary-foreground hover:bg-primary/90"
             )}
-            tooltip={item.title} // Add tooltip for collapsed state
+            tooltip={item.title}
           >
             <Link to={item.href}>
               <item.icon className="mr-2 h-5 w-5" />
@@ -74,38 +74,39 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar className="border-r flex flex-col" collapsible="icon"> {/* Added collapsible="icon" */}
+    <Sidebar className="border-r flex flex-col" collapsible="icon">
       <SidebarHeader className="p-4 border-b">
-        <div className="hidden lg:block group-data-[collapsible=icon]:hidden"> {/* Hide full logo when collapsed */}
+        <div className="hidden lg:block group-data-[collapsible=icon]:hidden">
           <AppLogo />
         </div>
-         <div className="lg:hidden group-data-[collapsible=icon]:block group-data-[collapsible=icon]:mx-auto"> {/* Show minimal logo for small/collapsed view */}
-          <Link to="/" className="text-2xl font-bold font-inter text-primary">SL</Link>
+         <div className="lg:hidden group-data-[collapsible=icon]:block group-data-[collapsible=icon]:mx-auto">
+          <Link to="/dashboard" className="text-2xl font-bold font-inter text-primary">SL</Link> {/* Updated AppLogo link for collapsed state */}
         </div>
       </SidebarHeader>
-      <SidebarContent className="flex-grow p-2"> {/* Adjusted padding */}
+      <SidebarContent className="flex-grow p-2">
         <SidebarGroup>
           <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             {renderNavItems(mainNavItems)}
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup className="mt-2"> {/* Adjusted margin */}
+        <SidebarGroup className="mt-2">
           <SidebarGroupLabel>Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             {renderNavItems(toolsNavItems)}
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup className="mt-2"> {/* Adjusted margin */}
+        <SidebarGroup className="mt-2">
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>
             {renderNavItems(accountNavItems)}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden"> {/* Hide footer text when collapsed */}
-        <p className="text-xs text-muted-foreground">&copy; 2025 SmartLesson</p>
+      <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
+        <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} SmartLesson</p>
       </SidebarFooter>
     </Sidebar>
   );
 }
+
