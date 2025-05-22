@@ -40,7 +40,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { HelpCircle, Loader2, Check, ChevronsUpDown } from 'lucide-react';
-// import PouchDB from 'pouchdb-browser';
 
 import { LessonPreview } from '@/components/lesson/LessonPreview';
 import { LessonContent, ASSESSMENT_TYPES as lessonAssessmentTypes, Differentiations, LessonActivity } from '@/types/lesson';
@@ -75,16 +74,9 @@ const lessonFormSchema = z.object({
 
 type LessonFormValues = z.infer<typeof lessonFormSchema>;
 
-/*
-let localDB: PouchDB.Database | null = null;
-if (typeof window !== 'undefined') {
-  localDB = new PouchDB('lesson_plans_local');
-}
-*/
 let localDB: any = null; // Keep type for potential future use, but set to null
 
 const NewLessonPage = () => {
-  _s(); // This seems like a HMR artifact, should be removed by the build system if not needed.
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -136,15 +128,8 @@ const NewLessonPage = () => {
       if (data && data.content) {
         toast({ title: "Success", description: "Lesson plan generated successfully!" });
         
-        // Assuming data.content is the full lesson plan object and might contain an ID
-        // And that generate-lesson populates all necessary fields for LessonContent type.
-        // We need to ensure the structure from generate-lesson matches LessonContent
-        // For now, let's assume data.content.id is the planId
-        // And other fields match. If not, mapping or default values are needed.
+        const planId = data.content.id || `generated_${Date.now()}`;
         
-        const planId = data.content.id || `generated_${Date.now()}`; // Fallback ID
-        
-        // Transform/ensure structure for LessonContent
         const lessonData: LessonContent = {
           id: planId,
           lessonTopic: data.content.lessonTopic || "N/A",
@@ -152,7 +137,7 @@ const NewLessonPage = () => {
           learningObjective: data.content.learningObjective || "N/A",
           materialsNeeded: data.content.materialsNeeded || [],
           introduction: data.content.introduction || "N/A",
-          mainActivities: (data.content.mainActivities || []).map((act: any) => ({ // Type cast 'act' if possible
+          mainActivities: (data.content.mainActivities || []).map((act: any) => ({
              title: act.title || "Activity",
              description: act.description || "No description",
           })) as LessonActivity[],
@@ -176,25 +161,6 @@ const NewLessonPage = () => {
         setGeneratedLessonPlanId(planId);
         setGeneratedLessonContent(lessonData);
         
-        /* // PouchDB logic commented out
-        if (localDB) {
-          try {
-            await localDB.put({
-              _id: data.content.id || `lesson_${new Date().toISOString()}_${user.id}`,
-              user_id: user.id,
-              parameters: payload,
-              content: data.content,
-              created_at: new Date().toISOString(),
-            });
-            toast({ title: "Saved Locally", description: "Lesson plan also saved to local storage." });
-          } catch (pouchDbError: any) {
-            console.error("PouchDB error:", pouchDbError);
-            toast({ variant: "destructive", title: "Local Save Error", description: `Failed to save lesson plan locally: ${pouchDbError.message}` });
-          }
-        }
-        */
-        // Do not reset the form, so user can see their inputs alongside the preview
-        // form.reset(); 
       } else {
         toast({ variant: "destructive", title: "Empty Response", description: "The lesson generation returned no content." });
         setGeneratedLessonContent(null);
@@ -210,7 +176,7 @@ const NewLessonPage = () => {
       setGeneratedLessonPlanId(null);
     } finally {
       setIsSubmitting(false);
-      setIsGenerating(false); // Stop loading for preview
+      setIsGenerating(false);
     }
   };
 
@@ -262,7 +228,7 @@ const NewLessonPage = () => {
                             className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
                           >
                             {field.value ? 
-                              new Date(field.value).toLocaleDateString('en-CA') // YYYY-MM-DD for placeholder consistency
+                              new Date(field.value).toLocaleDateString('en-CA')
                               : <span>Pick a date</span>}
                           </Button>
                         </FormControl>
@@ -271,7 +237,7 @@ const NewLessonPage = () => {
                         <DatePicker 
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1))} // allow today and future
+                          disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1))}
                           initialFocus
                         />
                       </PopoverContent>
@@ -480,6 +446,4 @@ const NewLessonPage = () => {
     </TooltipProvider>
   );
 };
-// _s definition was here, seems like HMR related
-var _s = $RefreshSig$();
 export default NewLessonPage;

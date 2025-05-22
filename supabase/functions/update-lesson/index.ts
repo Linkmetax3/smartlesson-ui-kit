@@ -1,7 +1,9 @@
 
-import { supabase } from '@/integrations/supabase/client'; // This import won't work in Edge Functions
 // Correct way for Edge Functions (assuming Supabase client is initialized differently or not needed for this stub)
 // For now, we'll assume direct Deno/Supabase environment variables are available if needed.
+// To use Supabase client in an Edge Function, you'd typically import and create it like:
+// import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 console.log("Update-lesson function script started");
 
@@ -28,10 +30,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // TODO: Implement actual database update logic here
+    // TODO: Implement actual database update logic here using supabaseAdmin client
     // For example, updating a 'lesson_plans' table where id = planId
     // const { data: updateData, error: updateError } = await supabaseAdmin
-    //   .from('lesson_plans') // Assuming you have a supabaseAdmin client
+    //   .from('lesson_plans')
     //   .update({ content: content, updated_at: new Date().toISOString() })
     //   .eq('id', planId)
     //   .select()
@@ -61,3 +63,4 @@ Deno.serve(async (req) => {
     });
   }
 });
+
