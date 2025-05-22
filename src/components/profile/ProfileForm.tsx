@@ -1,182 +1,226 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { useFormContext, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from '@/components/ui/form';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useProfileData, ProfileFormValues } from '@/hooks/useProfileData';
-import { ChevronDown } from 'lucide-react';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, XIcon } from 'lucide-react'; // Added XIcon
+import { Badge } from "@/components/ui/badge"; // Added Badge
 
-const subjectOptions = [
-  "Mathematics", "Physical Sciences", "Life Sciences", "Afrikaans", "English", 
-  "IsiXhosa", "Social Sciences", "Geography", "History", "IT", "CAT", "Life Orientation"
+const subjectList = [
+  { value: "Mathematics", label: "Mathematics" },
+  { value: "Physical Sciences", label: "Physical Sciences" },
+  { value: "Life Sciences", label: "Life Sciences" },
+  { value: "Afrikaans", label: "Afrikaans" },
+  { value: "English", label: "English" },
+  { value: "IsiXhosa", label: "IsiXhosa" },
+  { value: "Social Sciences", label: "Social Sciences" },
+  { value: "Geography", label: "Geography" },
+  { value: "History", label: "History" },
+  { value: "IT", label: "IT" },
+  { value: "CAT", label: "CAT" },
+  { value: "Life Orientation", label: "Life Orientation" },
+  // ... Add other subjects as needed
 ];
 
-export interface ProfileFormProps {
-  className?: string;
+
+const profileFormSchema = z.object({
+  full_name: z.string().min(1, 'Full name is required.'),
+  subjects: z.array(z.string()).optional().default([]),
+  school_name: z.string().optional(),
+  location: z.string().optional(),
+  bio: z.string().optional(),
+  // role is not part of the form submission from user side, it's displayed
+});
+
+export type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+interface ProfileFormProps {
+  onSubmit: (data: ProfileFormValues) => void; // Add onSubmit prop back
+  isSubmitting: boolean;
+  initialProfileRole?: string;
 }
 
-const ProfileForm: React.FC<ProfileFormProps> = ({ className }) => {
-  const { profile, form, handleProfileUpdate, isLoading, isSubmitting, user } = useProfileData();
+const ProfileForm = ({ onSubmit, isSubmitting, initialProfileRole }: ProfileFormProps) => {
+  const methods = useFormContext<ProfileFormValues>();
+  const { control, watch, setValue, formState: { errors } } = methods;
 
-  const onSubmit = (data: ProfileFormValues) => {
-    handleProfileUpdate(data);
+  const [subjectSearch, setSubjectSearch] = useState('');
+  const [subjectPopoverOpen, setSubjectPopoverOpen] = useState(false);
+  const watchedSubjects = watch("subjects", []);
+
+  const handleSubjectSelect = (subjectValue: string) => {
+    const currentSubjects = watchedSubjects || [];
+    if (!currentSubjects.includes(subjectValue)) {
+      setValue("subjects", [...currentSubjects, subjectValue], { shouldValidate: true, shouldDirty: true });
+    }
+    setSubjectSearch(''); // Clear search input
+    // setSubjectPopoverOpen(false); // Optionally close popover on select
   };
 
-  const selectedSubjects = form.watch('subjects') || [];
-  const selectedSubjectsText = selectedSubjects.length > 0 
-    ? selectedSubjects.join(', ') 
-    : "Select subjects";
-  
-  const truncatedSelectedSubjectsText = selectedSubjects.length > 2 
-    ? `${selectedSubjects.slice(0, 2).join(', ')}, ...` 
-    : selectedSubjectsText;
+  const handleSubjectRemove = (subjectValue: string) => {
+    const currentSubjects = watchedSubjects || [];
+    setValue("subjects", currentSubjects.filter(s => s !== subjectValue), { shouldValidate: true, shouldDirty: true });
+  };
 
-
-  if (isLoading && !user) {
-    return <div className="text-center py-10">Loading profile...</div>;
-  }
-  
-  if (!isLoading && !user && !profile) {
-     // This case might indicate the user is not logged in or profile doesn't exist yet for a new user.
-     // The useProfileData hook attempts to load or initialize the form with user metadata.
-     // If form is available, show it. Otherwise, prompt login or show loading.
-     if (!form.formState.isDirty && !profile) {
-        // This could be a brief state before form default values are set by useEffect in useProfileData
-        // Or if user is truly not logged in and useAuth hasn't redirected.
-        // For now, we rely on AuthGuard to handle non-authenticated users.
-        // If form is available (useProfileData provides it), render form.
-     }
-  }
-
+  const filteredSubjects = subjectList.filter(subject =>
+    subject.label.toLowerCase().includes(subjectSearch.toLowerCase()) &&
+    !watchedSubjects.includes(subject.value)
+  );
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className={`space-y-8 ${className}`}>
-        <FormField
-          control={form.control}
-          name="full_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Full Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Your full name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6">
+      <div>
+        <Label htmlFor="full_name">Full Name</Label>
+        <Input
+          id="full_name"
+          {...methods.register('full_name')}
+          className="mt-1"
         />
+        {errors.full_name && <p className="text-sm text-red-600 mt-1">{errors.full_name.message}</p>}
+      </div>
 
-        <FormField
-          control={form.control}
-          name="subjects"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Subjects Taught</FormLabel>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    <span className="truncate pr-2">
-                      {selectedSubjects.length === 0 ? "Select subjects" : 
-                       selectedSubjects.length <= 2 ? selectedSubjects.join(', ') : 
-                       `${selectedSubjects.slice(0,2).join(', ')} & ${selectedSubjects.length - 2} more`}
-                    </span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-full max-h-60 overflow-y-auto">
-                  <DropdownMenuLabel>Select Subjects</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {subjectOptions.map((subject) => (
-                    <DropdownMenuCheckboxItem
-                      key={subject}
-                      checked={field.value?.includes(subject)}
-                      onCheckedChange={(checked) => {
-                        const currentSubjects = field.value || [];
-                        if (checked) {
-                          field.onChange([...currentSubjects, subject]);
-                        } else {
-                          field.onChange(currentSubjects.filter((s) => s !== subject));
-                        }
+      <div>
+        <Label>Role</Label>
+        <Input
+          value={initialProfileRole || 'N/A'}
+          readOnly
+          className="mt-1 bg-gray-100"
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="subjects">Subjects Taught</Label>
+        <Popover open={subjectPopoverOpen} onOpenChange={setSubjectPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={subjectPopoverOpen}
+              className="w-full justify-between mt-1 h-auto min-h-10" // Allow button to grow
+            >
+              <div className="flex flex-wrap gap-1 items-center">
+                {watchedSubjects.length > 0 ? (
+                  watchedSubjects.map(subjectValue => {
+                    const subjectLabel = subjectList.find(s => s.value === subjectValue)?.label || subjectValue;
+                    return (
+                      <Badge key={subjectValue} variant="secondary" className="flex items-center gap-1">
+                        {subjectLabel}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${subjectLabel}`}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent popover trigger
+                            handleSubjectRemove(subjectValue);
+                          }}
+                          className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })
+                ) : (
+                  <span className="text-muted-foreground">Select subjects...</span>
+                )}
+              </div>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <Command>
+              <CommandInput 
+                placeholder="Search subject..." 
+                value={subjectSearch}
+                onValueChange={setSubjectSearch}
+              />
+              <CommandList>
+                <CommandEmpty>
+                  {subjectList.length === watchedSubjects.length ? "All subjects selected." : "No subject found."}
+                </CommandEmpty>
+                <CommandGroup>
+                  {filteredSubjects.map((subject) => (
+                    <CommandItem
+                      key={subject.value}
+                      value={subject.label} // Use label for display and search matching by cmdk
+                      onSelect={() => { // onSelect here means when user clicks or hits enter
+                        handleSubjectSelect(subject.value);
                       }}
                     >
-                      {subject}
-                    </DropdownMenuCheckboxItem>
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          watchedSubjects.includes(subject.value) ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {subject.label}
+                    </CommandItem>
                   ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <FormDescription>
-                Select the subjects you teach.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        {errors.subjects && <p className="text-sm text-red-600 mt-1">{errors.subjects.message}</p>}
+      </div>
 
-        <FormField
-          control={form.control}
-          name="school_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>School Name (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="Your school's name" {...field} value={field.value || ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div>
+        <Label htmlFor="school_name">School Name (Optional)</Label>
+        <Input
+          id="school_name"
+          {...methods.register('school_name')}
+          className="mt-1"
         />
+        {errors.school_name && <p className="text-sm text-red-600 mt-1">{errors.school_name.message}</p>}
+      </div>
 
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="City, Country" {...field} value={field.value || ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div>
+        <Label htmlFor="location">Location (Optional)</Label>
+        <Input
+          id="location"
+          {...methods.register('location')}
+          className="mt-1"
         />
+        {errors.location && <p className="text-sm text-red-600 mt-1">{errors.location.message}</p>}
+      </div>
 
-        <FormField
-          control={form.control}
-          name="bio"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Bio (Optional)</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Tell us a little bit about yourself" {...field} value={field.value || ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div>
+        <Label htmlFor="bio">Bio (Optional)</Label>
+        <Textarea
+          id="bio"
+          {...methods.register('bio')}
+          className="mt-1"
+          rows={4}
         />
+        {errors.bio && <p className="text-sm text-red-600 mt-1">{errors.bio.message}</p>}
+      </div>
 
-        <Button type="submit" disabled={isSubmitting || isLoading} className="w-full sm:w-auto">
-          {isSubmitting ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </form>
-    </Form>
+      <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+        {isSubmitting ? 'Saving...' : 'Save Profile'}
+      </Button>
+    </form>
   );
 };
 
