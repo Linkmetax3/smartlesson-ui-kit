@@ -1,19 +1,8 @@
 
-import { supabase } from '@/integrations/supabase/adminClient'; // Assuming admin client for DB operations if needed
-// Note: For edge functions, direct import from @/integrations/supabase/client might not work due to Deno runtime.
-// Usually, you'd pass SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as env vars and create client within the function.
-// For simplicity in this stub, let's assume a helper or direct env var usage.
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts'; // Assuming you might create a shared CORS helper
 
-// Define a placeholder for creating Supabase client if needed within Deno
-// import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-console.log('generate-quiz function loaded');
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
+// Define types for request payload and quiz structure
 interface GenerateQuizPayload {
   planId: string;
   topics: string[];
@@ -21,14 +10,22 @@ interface GenerateQuizPayload {
   numQuestions: number;
 }
 
+interface QuizQuestion {
+  question: string;
+  choices: string[];
+  answer: string;
+}
+
 // Placeholder for LLM call - replace with actual implementation
-async function callLlmForQuiz(payload: GenerateQuizPayload): Promise<Array<{ question: string; choices: string[]; answer: string }>> {
+async function callLlmForQuiz(
+  payload: GenerateQuizPayload
+): Promise<QuizQuestion[]> {
   console.log("Mock LLM call with payload:", payload);
   // Simulate LLM response
   return Array.from({ length: payload.numQuestions }).map((_, i) => ({
-    question: `Sample Question ${i + 1} on ${payload.topics.join(', ')} for ${payload.learnerLevel} learners?`,
-    choices: ['Option A', 'Option B', 'Option C', 'Correct Answer D'],
-    answer: 'Correct Answer D',
+    question: `Sample Question ${i + 1} on ${payload.topics.join(', ')} for ${payload.learnerLevel} learners? Generated at ${new Date().toISOString()}`,
+    choices: [`Option A${i}`, `Option B${i}`, `Correct Answer C${i}`, `Option D${i}`],
+    answer: `Correct Answer C${i}`,
   }));
 }
 
@@ -44,47 +41,62 @@ Deno.serve(async (req: Request) => {
 
     const { planId, topics, learnerLevel, numQuestions } = body;
 
-    if (!planId || !topics || !learnerLevel || !numQuestions) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+    if (!planId || !topics || topics.length === 0 || !learnerLevel || !numQuestions) {
+      return new Response(JSON.stringify({ error: 'Missing required fields or empty topics array.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
+    if (numQuestions < 1 || numQuestions > 20) { // Example validation
+        return new Response(JSON.stringify({ error: 'Number of questions must be between 1 and 20.' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+
     // 1. Call LLM to generate quiz content (mocked here)
     const quizQuestions = await callLlmForQuiz(body);
 
     // 2. Store the generated quiz in the 'quizzes' table
-    // Ensure you have a Supabase client configured for Deno (e.g., using env vars)
-    // const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    // Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in Edge Function environment variables
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    const { data: newQuiz, error: dbError } = await supabaseAdmin
+      .from('quizzes')
+      .insert({
+        plan_id: planId,
+        content: quizQuestions, // Stored as JSONB
+        parameters: { topics, learnerLevel, numQuestions }, // Store generation parameters
+      })
+      .select('id, content') // Select id and content of the newly inserted quiz
+      .single();
+
+    if (dbError) {
+      console.error('Error saving quiz to DB:', dbError);
+      return new Response(JSON.stringify({ error: `Database error: ${dbError.message}` }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!newQuiz) {
+      console.error('Quiz data was not returned after insert.');
+      return new Response(JSON.stringify({ error: 'Failed to save quiz or retrieve it after saving.' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
-    // For this stub, we won't interact with DB directly.
-    // In a real scenario, you'd use the admin client to insert into `quizzes` table.
-    // const { data: newQuiz, error: dbError } = await supabaseAdmin
-    //   .from('quizzes')
-    //   .insert({
-    //     plan_id: planId,
-    //     content: quizQuestions,
-    //     parameters: { topics, learnerLevel, numQuestions },
-    //   })
-    //   .select()
-    //   .single();
-
-    // if (dbError) {
-    //   console.error('Error saving quiz to DB:', dbError);
-    //   throw dbError;
-    // }
-
-    // Mocked DB insertion
-    const mockQuizId = `quiz_${crypto.randomUUID()}`;
-    console.log("Mock quiz stored with ID:", mockQuizId);
-
+    console.log("Quiz stored successfully with ID:", newQuiz.id);
 
     return new Response(
       JSON.stringify({
-        quizId: mockQuizId, // Should be newQuiz.id from DB
-        content: quizQuestions, // Should be newQuiz.content from DB
-        planId: planId,
+        quizId: newQuiz.id,
+        content: newQuiz.content, // Content from the DB
+        planId: planId, // Echo back planId for client use
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -99,3 +111,4 @@ Deno.serve(async (req: Request) => {
     });
   }
 });
+
