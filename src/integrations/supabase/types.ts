@@ -9,13 +9,300 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      analytics_events: {
+        Row: {
+          event_type: string
+          id: string
+          metadata: Json | null
+          occurred_at: string
+          plan_id: string | null
+          quiz_id: string | null
+          user_id: string
+        }
+        Insert: {
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          occurred_at?: string
+          plan_id?: string | null
+          quiz_id?: string | null
+          user_id: string
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          occurred_at?: string
+          plan_id?: string | null
+          quiz_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      calendar_events: {
+        Row: {
+          created_at: string
+          id: string
+          plan_id: string
+          scheduled_for: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan_id: string
+          scheduled_for: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan_id?: string
+          scheduled_for?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      lesson_plans: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          parameters: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: string
+          parameters: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          parameters?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          calendar_event_id: string
+          id: string
+          payload: Json
+          send_at: string
+          sent: boolean
+        }
+        Insert: {
+          calendar_event_id: string
+          id?: string
+          payload: Json
+          send_at: string
+          sent?: boolean
+        }
+        Update: {
+          calendar_event_id?: string
+          id?: string
+          payload?: Json
+          send_at?: string
+          sent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          bio: string | null
+          created_at: string
+          full_name: string
+          id: string
+          location: string | null
+          role: string
+          school_name: string | null
+          subjects: string[] | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          location?: string | null
+          role: string
+          school_name?: string | null
+          subjects?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          location?: string | null
+          role?: string
+          school_name?: string | null
+          subjects?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          created_at: string
+          id: number
+          key: string
+          template: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          key: string
+          template: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          key?: string
+          template?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      quizzes: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          parameters: Json
+          plan_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: string
+          parameters: Json
+          plan_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          parameters?: Json
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_suggestions: {
+        Row: {
+          created_at: string
+          id: string
+          plan_id: string
+          resource: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan_id: string
+          resource: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan_id?: string
+          resource?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_suggestions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
