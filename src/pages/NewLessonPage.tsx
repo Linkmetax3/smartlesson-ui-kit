@@ -42,6 +42,9 @@ import { useToast } from '@/hooks/use-toast';
 import { HelpCircle, Loader2, Check, ChevronsUpDown } from 'lucide-react';
 // import PouchDB from 'pouchdb-browser';
 
+import { LessonPreview } from '@/components/lesson/LessonPreview';
+import { LessonContent, ASSESSMENT_TYPES as lessonAssessmentTypes, Differentiations, LessonActivity } from '@/types/lesson';
+
 const subjectList = [
   { value: "Mathematics", label: "Mathematics" },
   { value: "Physical Sciences", label: "Physical Sciences" },
@@ -81,10 +84,14 @@ if (typeof window !== 'undefined') {
 let localDB: any = null; // Keep type for potential future use, but set to null
 
 const NewLessonPage = () => {
+  _s(); // This seems like a HMR artifact, should be removed by the build system if not needed.
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false); // For preview loading state
   const [subjectPopoverOpen, setSubjectPopoverOpen] = useState(false);
+  const [generatedLessonPlanId, setGeneratedLessonPlanId] = useState<string | null>(null);
+  const [generatedLessonContent, setGeneratedLessonContent] = useState<LessonContent | null>(null);
 
   const form = useForm<LessonFormValues>({
     resolver: zodResolver(lessonFormSchema),
@@ -104,6 +111,10 @@ const NewLessonPage = () => {
       return;
     }
     setIsSubmitting(true);
+    setIsGenerating(true); // Start loading for preview
+    setGeneratedLessonContent(null); // Clear previous preview
+    setGeneratedLessonPlanId(null);
+
     try {
       const payload = {
         user_id: user.id,
@@ -124,7 +135,48 @@ const NewLessonPage = () => {
 
       if (data && data.content) {
         toast({ title: "Success", description: "Lesson plan generated successfully!" });
-        /*
+        
+        // Assuming data.content is the full lesson plan object and might contain an ID
+        // And that generate-lesson populates all necessary fields for LessonContent type.
+        // We need to ensure the structure from generate-lesson matches LessonContent
+        // For now, let's assume data.content.id is the planId
+        // And other fields match. If not, mapping or default values are needed.
+        
+        const planId = data.content.id || `generated_${Date.now()}`; // Fallback ID
+        
+        // Transform/ensure structure for LessonContent
+        const lessonData: LessonContent = {
+          id: planId,
+          lessonTopic: data.content.lessonTopic || "N/A",
+          themeOfWeek: data.content.themeOfWeek || values.themeOfWeek || "N/A",
+          learningObjective: data.content.learningObjective || "N/A",
+          materialsNeeded: data.content.materialsNeeded || [],
+          introduction: data.content.introduction || "N/A",
+          mainActivities: (data.content.mainActivities || []).map((act: any) => ({ // Type cast 'act' if possible
+             title: act.title || "Activity",
+             description: act.description || "No description",
+          })) as LessonActivity[],
+          differentiations: {
+            strugglingLearners: data.content.differentiations?.strugglingLearners || "",
+            onTrackLearners: data.content.differentiations?.onTrackLearners || "",
+            advancedLearners: data.content.differentiations?.advancedLearners || "",
+            accommodations: data.content.differentiations?.accommodations || "",
+          } as Differentiations,
+          extensionActivity: data.content.extensionActivity || "",
+          conclusion: data.content.conclusion || "",
+          evaluation: data.content.evaluation || "",
+          assessmentType: data.content.assessmentType || values.assessmentType,
+          teacherReflection: data.content.teacherReflection || "",
+          grade: values.grade,
+          date: values.date.toISOString().split('T')[0],
+          learnerLevel: values.learnerLevel,
+          user_id: user.id,
+        };
+
+        setGeneratedLessonPlanId(planId);
+        setGeneratedLessonContent(lessonData);
+        
+        /* // PouchDB logic commented out
         if (localDB) {
           try {
             await localDB.put({
@@ -141,9 +193,12 @@ const NewLessonPage = () => {
           }
         }
         */
-        form.reset();
+        // Do not reset the form, so user can see their inputs alongside the preview
+        // form.reset(); 
       } else {
         toast({ variant: "destructive", title: "Empty Response", description: "The lesson generation returned no content." });
+        setGeneratedLessonContent(null);
+        setGeneratedLessonPlanId(null);
       }
     } catch (error: any) {
       toast({
@@ -151,8 +206,11 @@ const NewLessonPage = () => {
         title: "Generation Failed",
         description: error.message || "Could not generate lesson plan. Please try again.",
       });
+      setGeneratedLessonContent(null);
+      setGeneratedLessonPlanId(null);
     } finally {
       setIsSubmitting(false);
+      setIsGenerating(false); // Stop loading for preview
     }
   };
 
@@ -204,8 +262,8 @@ const NewLessonPage = () => {
                             className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
                           >
                             {field.value ? 
-                              new Date(field.value).toLocaleDateString('en-CA') : // YYYY-MM-DD for placeholder consistency
-                              <span>Pick a date</span>}
+                              new Date(field.value).toLocaleDateString('en-CA') // YYYY-MM-DD for placeholder consistency
+                              : <span>Pick a date</span>}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
@@ -411,9 +469,17 @@ const NewLessonPage = () => {
             </div>
           </form>
         </Form>
+
+        <LessonPreview 
+          initialPlanId={generatedLessonPlanId} 
+          initialContent={generatedLessonContent}
+          isLoading={isGenerating}
+        />
+
       </div>
     </TooltipProvider>
   );
 };
-
+// _s definition was here, seems like HMR related
+var _s = $RefreshSig$();
 export default NewLessonPage;
