@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -73,10 +72,6 @@ export const LessonSectionCard: React.FC<LessonSectionCardProps> = ({
 
     const result = await onSave(planId, updatedFullContent);
     if (result.success && result.data) {
-      // The parent (LessonPreview) will update its state, which will flow down as new initialData
-      // This effect will then update currentData and editData:
-      // setCurrentData(result.data[sectionKey]); 
-      // setEditData(result.data[sectionKey]);
       setIsEditing(false);
       setHasChanged(false);
       toast({ title: "Saved!", description: `${sectionTitle} updated successfully.` });
@@ -104,52 +99,58 @@ export const LessonSectionCard: React.FC<LessonSectionCardProps> = ({
   const renderDisplayValue = () => {
     if (currentData === null || currentData === undefined) return <span className="text-muted-foreground">Not specified</span>;
 
-    if (Array.isArray(currentData)) {
+    // Specific array types
+    if (sectionKey === 'materialsNeeded' && Array.isArray(currentData)) {
       if (currentData.length === 0) return <span className="text-muted-foreground">None specified</span>;
-      if (sectionKey === 'materialsNeeded') {
-        return (
-          <ul className="list-disc pl-5 space-y-1">
-            {(currentData as string[]).map((item, index) => <li key={index}>{item}</li>)}
-          </ul>
-        );
+      return (
+        <ul className="list-disc pl-5 space-y-1">
+          {(currentData as string[]).map((item, index) => <li key={index}>{item}</li>)}
+        </ul>
+      );
+    } else if (sectionKey === 'mainActivities' && Array.isArray(currentData)) {
+      if (currentData.length === 0) return <span className="text-muted-foreground">None specified</span>;
+      return (currentData as LessonActivity[]).map((activity, index) => (
+        <div key={index} className="mb-3 p-3 border rounded-md bg-muted/30">
+          <p className="font-semibold text-primary">{activity.title || `Activity ${index + 1}`}</p>
+          <p className="text-sm whitespace-pre-wrap mt-1">{activity.description || <span className="text-muted-foreground">No description</span>}</p>
+        </div>
+      ));
+    } 
+    // Specific object type
+    else if (sectionKey === 'differentiations' && typeof currentData === 'object' && currentData !== null && !Array.isArray(currentData)) {
+      const diffData = currentData as Differentiations;
+      const diffLabels: Record<keyof Differentiations, string> = {
+          strugglingLearners: "Support for Struggling Learners",
+          onTrackLearners: "Activities for On-Track Learners",
+          advancedLearners: "Challenge for Advanced Learners",
+          accommodations: "Accommodations/Modifications"
+      };
+      const diffContent = (Object.keys(diffData) as Array<keyof Differentiations>).map((key) => (
+        <li key={key}>
+          <span className="font-semibold capitalize block text-primary">{diffLabels[key]}: </span>
+          <p className="text-sm whitespace-pre-wrap pl-2">{diffData[key] || <span className="text-muted-foreground">Not specified</span>}</p>
+        </li>
+      ));
+      if (diffContent.every(item => (item.props.children[1].props.children.props.children === "Not specified"))) {
+        return <span className="text-muted-foreground">None specified</span>;
       }
-      if (sectionKey === 'mainActivities') {
-        return (currentData as LessonActivity[]).map((activity, index) => (
-          <div key={index} className="mb-3 p-3 border rounded-md bg-muted/30">
-            <p className="font-semibold text-primary">{activity.title || `Activity ${index + 1}`}</p>
-            <p className="text-sm whitespace-pre-wrap mt-1">{activity.description || <span className="text-muted-foreground">No description</span>}</p>
-          </div>
-        ));
-      }
+      return <ul className="space-y-2">{diffContent}</ul>;
     }
-    if (typeof currentData === 'object' && currentData !== null) {
-      if (sectionKey === 'differentiations') {
-        const diffData = currentData as Differentiations;
-        const diffLabels: Record<keyof Differentiations, string> = {
-            strugglingLearners: "Support for Struggling Learners",
-            onTrackLearners: "Activities for On-Track Learners",
-            advancedLearners: "Challenge for Advanced Learners",
-            accommodations: "Accommodations/Modifications"
-        };
-        return (
-          <ul className="space-y-2">
-            {(Object.keys(diffData) as Array<keyof Differentiations>).map((key) => (
-              <li key={key}>
-                <span className="font-semibold capitalize block text-primary">{diffLabels[key]}: </span>
-                <p className="text-sm whitespace-pre-wrap pl-2">{diffData[key] || <span className="text-muted-foreground">Not specified</span>}</p>
-              </li>
-            ))}
-          </ul>
-        );
+    // Specific string enum type
+    else if (sectionKey === 'assessmentType') {
+      if (typeof currentData === 'string' && ASSESSMENT_TYPES.includes(currentData as AssessmentType)) {
+        return <p className="capitalize">{currentData}</p>;
       }
+      // If it's supposed to be assessmentType but data is wrong type or value
+      return <span className="text-muted-foreground">Invalid assessment type value.</span>;
     }
-    if (typeof currentData === 'string') {
+    // Generic string type for other sections
+    else if (typeof currentData === 'string') {
       return <p className="whitespace-pre-wrap">{currentData || <span className="text-muted-foreground">Not specified</span>}</p>;
     }
-    if (sectionKey === 'assessmentType') {
-        return <p className="capitalize">{currentData as AssessmentType}</p>;
-    }
-    return <span className="text-muted-foreground">Content display not implemented for this type.</span>;
+    
+    // Fallback for types/keys not explicitly handled above
+    return <span className="text-muted-foreground">Display not configured for this content type.</span>;
   };
 
   const renderEditField = () => {
@@ -162,11 +163,11 @@ export const LessonSectionCard: React.FC<LessonSectionCardProps> = ({
             value={editData}
             onChange={(e) => setEditData(e.target.value.substring(0, MAX_TEXTAREA_CHARS))}
             placeholder={`Enter ${sectionTitle.toLowerCase()}...`}
-            rows={Math.max(4, Math.min(8, editData.split('\n').length + 1))} // Dynamic rows based on content
+            rows={Math.max(4, Math.min(8, (editData || "").split('\n').length + 1))} // Dynamic rows based on content, added null check for editData
             maxLength={MAX_TEXTAREA_CHARS}
             className="resize-y"
           />
-          <p className="text-xs text-muted-foreground mt-1 text-right">{editData.length}/{MAX_TEXTAREA_CHARS}</p>
+          <p className="text-xs text-muted-foreground mt-1 text-right">{(editData || "").length}/{MAX_TEXTAREA_CHARS}</p>
         </div>
       );
     }
@@ -253,7 +254,7 @@ export const LessonSectionCard: React.FC<LessonSectionCardProps> = ({
     }
 
     // differentiations: Differentiations (object)
-    if (sectionKey === 'differentiations' && typeof editData === 'object' && editData !== null) {
+    if (sectionKey === 'differentiations' && typeof editData === 'object' && editData !== null && !Array.isArray(editData)) { // Added !Array.isArray(editData) for robustness
         const diffData = editData as Differentiations;
         const updateDiff = (key: keyof Differentiations, value: string) => {
             setEditData({ ...diffData, [key]: value });
@@ -266,12 +267,12 @@ export const LessonSectionCard: React.FC<LessonSectionCardProps> = ({
         };
         return (
             <div className="space-y-4">
-                {(Object.keys(diffData) as Array<keyof Differentiations>).map(key => (
+                {(Object.keys(diffLabels) as Array<keyof Differentiations>).map(key => ( // Iterate over diffLabels to ensure all fields are shown
                     <div key={key}>
                         <Label htmlFor={`diff-${key}`} className="text-base font-medium">{diffLabels[key]}</Label>
                         <Textarea
                             id={`diff-${key}`}
-                            value={diffData[key]}
+                            value={diffData[key] || ''} // Ensure value is not undefined
                             onChange={(e) => updateDiff(key, e.target.value.substring(0, MAX_TEXTAREA_CHARS))}
                             placeholder={`Describe strategies for ${diffLabels[key].toLowerCase()}`}
                             rows={3}
