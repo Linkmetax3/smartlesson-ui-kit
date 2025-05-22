@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -54,18 +53,12 @@ const SignUpPage = () => {
         throw error;
       }
       
-      // The onAuthStateChange listener in AuthContext should handle user state.
-      // Supabase sends a confirmation email by default. 
-      // The user needs to confirm their email before they can log in.
-      // For development, you might want to disable email confirmation in Supabase settings.
       toast({
         title: "Account created!",
-        description: "Please check your email to confirm your account before signing in.",
+        description: "Please check your email to confirm your account. You will be redirected to your profile.",
       });
-      // Instead of redirecting to /profile immediately, we wait for email confirmation.
-      // Or, if auto-confirm is on in Supabase, this could go to /profile or /signin.
-      // For now, let's guide them to sign in after confirming email.
-      navigate('/signin'); 
+      // Redirect to /profile after successful sign-up
+      navigate('/profile'); 
 
     } catch (error: any) {
       toast({

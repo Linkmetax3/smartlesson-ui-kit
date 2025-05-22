@@ -91,22 +91,17 @@ const ProfilePage = () => {
     if (!user) return;
     setIsSubmitting(true);
 
-    // Transform subjects string back to array for DB
     const subjectsArray = data.subjects ? data.subjects.split(',').map(s => s.trim()).filter(s => s) : [];
 
     const updateData: ProfileUpdate = {
       full_name: data.full_name,
       subjects: subjectsArray,
-      school_name: data.school_name || null, // Send null if empty string for optional fields
+      school_name: data.school_name || null,
       location: data.location || null,
       bio: data.bio || null,
-      updated_at: new Date().toISOString(), // Manually set updated_at if not handled by DB trigger on profiles
+      updated_at: new Date().toISOString(),
     };
     
-    // The handle_updated_at trigger should set updated_at, but it's good practice for frontend to send it too if it's part of the type.
-    // Our trigger is specific to ON UPDATE. If we were to use upsert, this might be needed.
-    // For now, we rely on the trigger for updates.
-
     try {
       const { error } = await supabase
         .from('profiles')
@@ -121,20 +116,17 @@ const ProfilePage = () => {
         title: "Profile updated",
         description: "Your profile information has been saved successfully.",
       });
-      // Re-fetch or update local state if needed, or rely on useEffect reset if defaultValues change
-      // For simplicity, form.formState.isDirty will become false after successful reset/submission
-      const updatedProfile = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
-      if (updatedProfile.data) {
-        setProfile(updatedProfile.data);
-         form.reset({ // Reset form with new data to clear dirty state
-            full_name: updatedProfile.data.full_name || '',
-            subjects: (updatedProfile.data.subjects || []).join(', '),
-            school_name: updatedProfile.data.school_name || '',
-            location: updatedProfile.data.location || '',
-            bio: updatedProfile.data.bio || '',
+      const updatedProfileResult = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
+      if (updatedProfileResult.data) {
+        setProfile(updatedProfileResult.data);
+         form.reset({ 
+            full_name: updatedProfileResult.data.full_name || '',
+            subjects: (updatedProfileResult.data.subjects || []).join(', '),
+            school_name: updatedProfileResult.data.school_name || '',
+            location: updatedProfileResult.data.location || '',
+            bio: updatedProfileResult.data.bio || '',
           });
       }
-       // Manually trigger user update in auth context if full_name changed, as it might be in user metadata
       if (session && data.full_name !== session.user.user_metadata.full_name) {
         await supabase.auth.updateUser({ data: { full_name: data.full_name } });
       }
@@ -166,7 +158,6 @@ const ProfilePage = () => {
       </div>
     );
   }
-
 
   return (
     <div className="container mx-auto py-10 px-4">
@@ -201,22 +192,21 @@ const ProfilePage = () => {
                 </FormItem>
               </div>
 
-              <FormField
-                control={form.control}
-                name="subjects"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel htmlFor="subjects">Subjects You Teach</FormLabel>
-                    <FormControl>
-                      <Input id="subjects" {...field} placeholder="e.g., Mathematics, History, Physics" aria-invalid={!!form.formState.errors.subjects} />
-                    </FormControl>
-                    <FormDescription>Enter subjects separated by commas.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
               <div className="grid md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="subjects"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="subjects">Subjects You Teach</FormLabel>
+                      <FormControl>
+                        <Input id="subjects" {...field} placeholder="e.g., Mathematics, History, Physics" aria-invalid={!!form.formState.errors.subjects} />
+                      </FormControl>
+                      <FormDescription>Enter subjects separated by commas.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="school_name"
@@ -230,6 +220,9 @@ const ProfilePage = () => {
                     </FormItem>
                   )}
                 />
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="location"
@@ -243,21 +236,21 @@ const ProfilePage = () => {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="bio">Bio</FormLabel>
+                      <FormControl>
+                        <Textarea id="bio" {...field} placeholder="Tell us a little about yourself..." rows={4} aria-invalid={!!form.formState.errors.bio} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <FormField
-                control={form.control}
-                name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel htmlFor="bio">Bio</FormLabel>
-                    <FormControl>
-                      <Textarea id="bio" {...field} placeholder="Tell us a little about yourself..." rows={4} aria-invalid={!!form.formState.errors.bio} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <CardFooter className="px-0 pt-6">
                 <Button type="submit" disabled={isSubmitting || !form.formState.isDirty} className="ml-auto">
                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
