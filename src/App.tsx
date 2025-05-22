@@ -1,6 +1,6 @@
 
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner } from "@/components/ui/sonner"; // Keep this alias if Sonner is a different toaster system
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -24,9 +24,7 @@ import ResourcesPage from "./pages/ResourcesPage";
 import CalendarPage from "./pages/CalendarPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
-
-// Settings Page
-const SettingsPage = () => <div className="text-center"><h1 className="text-3xl font-bold">Settings Page</h1><p>User settings will be managed here.</p></div>;
+import SettingsPage from "./pages/SettingsPage"; // Import the new SettingsPage
 
 const queryClient = new QueryClient();
 
@@ -60,7 +58,7 @@ const App = () => (
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings" element={<SettingsPage />} /> {/* Use the imported SettingsPage */}
               
               <Route path="/courses" element={<Navigate to="/lessons" replace />} />
               <Route path="*" element={<NotFound />} />
@@ -73,4 +71,3 @@ const App = () => (
 );
 
 export default App;
-
