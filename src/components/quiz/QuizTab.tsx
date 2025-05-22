@@ -13,10 +13,11 @@ import { Json } from '@/integrations/supabase/types'; // Import Json type
 
 interface QuizTabProps {
   quizData: Quiz | null;
-  onQuizSaved: (updatedQuiz: Quiz) => void; 
+  onQuizSaved: (updatedQuiz: Quiz) => void;
+  lessonPlanId?: string; // Added lessonPlanId as an optional prop
 }
 
-export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQuizSaved }) => {
+export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQuizSaved, lessonPlanId }) => {
   const [quiz, setQuiz] = useState<Quiz | null>(initialQuizData);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -83,6 +84,9 @@ export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQ
       toast({ variant: 'destructive', title: 'Error', description: 'No quiz data to save.' });
       return;
     }
+    // Note: lessonPlanId is available here if needed for save logic, e.g., associating quiz if not already linked.
+    // For now, the save logic primarily uses quiz.id.
+    console.log("Saving quiz for lessonPlanId (if available):", lessonPlanId); 
     setIsSaving(true);
     try {
       const { data, error } = await supabase
