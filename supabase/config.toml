@@ -1,1 +1,16 @@
-project_id = "jexhqfksnhzvgqkjadzp"
+
+# supabase/config.toml
+app.name = "TeachSmart AI"
+app.id = "jexhqfksnhzvgqkjadzp" # Your Supabase project ID
+
+[functions.generate-lesson]
+# verify_jwt = true # Default, can be omitted
+# Eg:
+# handler = "file://functions/custom-handler.ts"
+# entrypoint = "main"
+
+[functions.update-lesson]
+# verify_jwt = true
+
+[functions.generate-quiz]
+# verify_jwt = true # Assuming quiz generation should be an authenticated action

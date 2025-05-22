@@ -5,17 +5,22 @@ import { LessonSectionCard } from './LessonSectionCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button'; // Added
+import { QuizModal } from '@/components/quiz/QuizModal'; // Added
+import { QuizQuestion } from '@/types/quiz'; // Added
 
 interface LessonPreviewProps {
   initialPlanId: string | null;
   initialContent: LessonContent | null;
   isLoading?: boolean; // For initial generation loading
+  onQuizGenerated: (quizData: { quizId: string; content: QuizQuestion[]; planId: string }) => void; // Added
 }
 
-export const LessonPreview: React.FC<LessonPreviewProps> = ({ initialPlanId, initialContent, isLoading }) => {
+export const LessonPreview: React.FC<LessonPreviewProps> = ({ initialPlanId, initialContent, isLoading, onQuizGenerated }) => {
   const [planId, setPlanId] = useState<string | null>(initialPlanId);
   const [currentLessonContent, setCurrentLessonContent] = useState<LessonContent | null>(initialContent);
   const { toast } = useToast();
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false); // Added
 
   useEffect(() => {
     setPlanId(initialPlanId);
@@ -102,18 +107,32 @@ export const LessonPreview: React.FC<LessonPreviewProps> = ({ initialPlanId, ini
 
   return (
     <div className="mt-10 pt-6 border-t">
-      <h2 className="text-2xl font-semibold mb-6">Lesson Preview & Edit</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold">Lesson Preview & Edit</h2>
+        <Button variant="secondary" onClick={() => setIsQuizModalOpen(true)} disabled={!planId || !currentLessonContent}>
+          Generate Quiz
+        </Button>
+      </div>
       {lessonContentKeys.map((key) => (
         <LessonSectionCard
-          key={`${planId}-${key}`} // Ensure key is unique if planId can change or multiple previews exist
+          key={`${planId}-${key}`} 
           planId={planId}
           sectionKey={key}
           sectionTitle={lessonSectionTitles[key]}
-          initialData={currentLessonContent[key]} // Pass the specific section data
+          initialData={currentLessonContent[key]}
           onSave={handleSaveSection}
           getFullContent={getFullContent}
         />
       ))}
+      {planId && currentLessonContent && (
+        <QuizModal
+          isOpen={isQuizModalOpen}
+          onOpenChange={setIsQuizModalOpen}
+          lessonPlanId={planId}
+          lessonContent={currentLessonContent}
+          onQuizGenerated={onQuizGenerated}
+        />
+      )}
     </div>
   );
 };
