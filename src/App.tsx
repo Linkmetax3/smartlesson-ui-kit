@@ -22,7 +22,7 @@ import LessonsPage from "./pages/LessonsPage";
 import NewLessonPage from "./pages/NewLessonPage";
 import QuizzesPage from "./pages/QuizzesPage";
 import ResourcesPage from "./pages/ResourcesPage";
-import CalendarPage from "./pages/CalendarPage";
+// Removed CalendarPage import
 import NotificationsPage from "./pages/NotificationsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -70,7 +70,7 @@ const App = () => (
               <Route path="/lessons/new" element={<NewLessonPage />} />
               <Route path="/quizzes" element={<QuizzesPage />} />
               <Route path="/resources" element={<ResourcesPage />} />
-              <Route path="/calendar" element={<CalendarPage />} />
+              {/* Removed /calendar route */}
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
@@ -89,4 +89,3 @@ const App = () => (
 );
 
 export default App;
-
