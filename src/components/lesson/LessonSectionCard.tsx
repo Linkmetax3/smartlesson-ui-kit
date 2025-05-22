@@ -125,16 +125,29 @@ export const LessonSectionCard: React.FC<LessonSectionCardProps> = ({
           advancedLearners: "Challenge for Advanced Learners",
           accommodations: "Accommodations/Modifications"
       };
-      const diffContent = (Object.keys(diffData) as Array<keyof Differentiations>).map((key) => (
-        <li key={key}>
-          <span className="font-semibold capitalize block text-primary">{diffLabels[key]}: </span>
-          <p className="text-sm whitespace-pre-wrap pl-2">{diffData[key] || <span className="text-muted-foreground">Not specified</span>}</p>
-        </li>
-      ));
-      if (diffContent.every(item => (item.props.children[1].props.children.props.children === "Not specified"))) {
+
+      // Check if there's any actual content in any of the defined differentiation fields
+      const hasAnyActualContent = (Object.keys(diffLabels) as Array<keyof Differentiations>)
+          .some(key => diffData[key] && diffData[key].trim() !== '');
+
+      if (!hasAnyActualContent) {
         return <span className="text-muted-foreground">None specified</span>;
       }
-      return <ul className="space-y-2">{diffContent}</ul>;
+
+      // If there is content, render the list for all defined differentiation types
+      return (
+        <ul className="space-y-2">
+          {(Object.keys(diffLabels) as Array<keyof Differentiations>).map((key) => (
+            <li key={key}>
+              <span className="font-semibold capitalize block text-primary">{diffLabels[key]}: </span>
+              <p className="text-sm whitespace-pre-wrap pl-2">
+                {/* If diffData[key] is an empty string, it will be falsy, and the span will be shown. This is desired. */}
+                {diffData[key] || <span className="text-muted-foreground">Not specified</span>}
+              </p>
+            </li>
+          ))}
+        </ul>
+      );
     }
     // Specific string enum type
     else if (sectionKey === 'assessmentType') {
