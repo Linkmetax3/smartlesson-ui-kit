@@ -1,6 +1,6 @@
 
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner"; // Keep Sonner if used elsewhere, or remove if only shadcn toast is used
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -8,7 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import MainLayout from "./components/layout/MainLayout";
 import AuthGuard from "./components/auth/AuthGuard";
-import { AuthProvider } from "./contexts/AuthContext"; // Added AuthProvider
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Public Pages
 import SignInPage from "./pages/SignInPage";
@@ -33,10 +33,10 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider> {/* Wrap with AuthProvider */}
-        <Toaster />
-        <Sonner /> {/* Ensure this is the Sonner component intended */}
-        <BrowserRouter>
+      <BrowserRouter> {/* BrowserRouter now wraps AuthProvider */}
+        <AuthProvider>
+          <Toaster />
+          <Sonner /> {/* Ensure this is the Sonner component intended */}
           <Routes>
             {/* Public routes */}
             <Route path="/signin" element={<SignInPage />} />
@@ -66,10 +66,11 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
 
 export default App;
+
