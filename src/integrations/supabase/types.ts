@@ -181,7 +181,7 @@ export type Database = {
           school_name: string | null
           subjects: string[] | null
           updated_at: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           bio?: string | null
@@ -193,7 +193,7 @@ export type Database = {
           school_name?: string | null
           subjects?: string[] | null
           updated_at?: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           bio?: string | null
@@ -205,7 +205,7 @@ export type Database = {
           school_name?: string | null
           subjects?: string[] | null
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
