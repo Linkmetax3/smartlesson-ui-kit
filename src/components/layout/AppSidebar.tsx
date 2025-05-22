@@ -9,7 +9,7 @@ import {
   FilePlus, 
   ClipboardList, 
   Archive, 
-  CalendarDays, 
+  // CalendarDays, // Removed CalendarDays import
   Bell, 
   BarChart3 
 } from 'lucide-react';
@@ -29,7 +29,7 @@ import AppLogo from './AppLogo';
 import { cn } from '@/lib/utils';
 
 const mainNavItems = [
-  { title: "Dashboard", href: "/dashboard", icon: Home }, // Updated href
+  { title: "Dashboard", href: "/dashboard", icon: Home },
   { title: "Lessons", href: "/lessons", icon: BookOpen },
   { title: "New Lesson", href: "/lessons/new", icon: FilePlus },
   { title: "Quizzes", href: "/quizzes", icon: ClipboardList },
@@ -37,7 +37,7 @@ const mainNavItems = [
 ];
 
 const toolsNavItems = [
-  { title: "Calendar", href: "/calendar", icon: CalendarDays },
+  // { title: "Calendar", href: "/calendar", icon: CalendarDays }, // Removed Calendar link
   { title: "Notifications", href: "/notifications", icon: Bell },
   { title: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
@@ -50,7 +50,7 @@ const accountNavItems = [
 export function AppSidebar() {
   const location = useLocation();
 
-  const renderNavItems = (items: typeof mainNavItems) => (
+  const renderNavItems = (items: typeof mainNavItems | typeof toolsNavItems | typeof accountNavItems) => (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
@@ -80,7 +80,7 @@ export function AppSidebar() {
           <AppLogo />
         </div>
          <div className="lg:hidden group-data-[collapsible=icon]:block group-data-[collapsible=icon]:mx-auto">
-          <Link to="/dashboard" className="text-2xl font-bold font-inter text-primary">SL</Link> {/* Updated AppLogo link for collapsed state */}
+          <Link to="/dashboard" className="text-2xl font-bold font-inter text-primary">SL</Link>
         </div>
       </SidebarHeader>
       <SidebarContent className="flex-grow p-2">
@@ -109,4 +109,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
