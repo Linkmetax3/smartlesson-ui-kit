@@ -4,13 +4,16 @@ app.name = "TeachSmart AI"
 app.id = "jexhqfksnhzvgqkjadzp" # Your Supabase project ID
 
 [functions.generate-lesson]
-# verify_jwt = true # Default, can be omitted
-# Eg:
-# handler = "file://functions/custom-handler.ts"
-# entrypoint = "main"
+# verify_jwt = true 
 
 [functions.update-lesson]
 # verify_jwt = true
 
 [functions.generate-quiz]
-# verify_jwt = true # Assuming quiz generation should be an authenticated action
+# verify_jwt = true 
+
+[functions.fetch-resources]
+# verify_jwt = true # Assuming fetching resources might require auth based on planId ownership
+
+[functions.log-event]
+# verify_jwt = true # Events should ideally be logged by authenticated users

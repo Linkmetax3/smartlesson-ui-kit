@@ -5,8 +5,9 @@ import type { Tables } from '@/integrations/supabase/types';
 export interface ResourceDetail {
   type: string;
   title: string;
-  url: string;
+  url:string;
   description: string;
+  tags?: string[]; // Added tags
 }
 
 // Define the type for a Resource Suggestion, extending the Supabase table row
@@ -14,4 +15,3 @@ export interface ResourceDetail {
 export interface ResourceSuggestion extends Omit<Tables<'resource_suggestions'>, 'resource'> {
   resource: ResourceDetail;
 }
-
