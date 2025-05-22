@@ -239,21 +239,21 @@ export type Database = {
           created_at: string
           id: string
           parameters: Json
-          plan_id: string
+          plan_id: string | null
         }
         Insert: {
           content: Json
           created_at?: string
           id?: string
           parameters: Json
-          plan_id: string
+          plan_id?: string | null
         }
         Update: {
           content?: Json
           created_at?: string
           id?: string
           parameters?: Json
-          plan_id?: string
+          plan_id?: string | null
         }
         Relationships: [
           {
