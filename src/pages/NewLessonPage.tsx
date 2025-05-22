@@ -46,6 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuizTab } from '@/components/quiz/QuizTab';
 import { Quiz, QuizQuestion } from '@/types/quiz';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Json } from '@/integrations/supabase/types';
 
 const subjectList = [
   { value: "Mathematics", label: "Mathematics" },
@@ -124,36 +125,44 @@ const NewLessonPage = () => {
           if (lessonError) throw lessonError;
           if (lessonData) {
             // Ensure content has an id property as LessonContent expects
+             const lessonContentFromDb = lessonData.content as unknown as Omit<LessonContent, 'id'>;
              const lessonContentWithId: LessonContent = {
-              ...(lessonData.content as Omit<LessonContent, 'id'>),
+              ...(lessonContentFromDb as LessonContent),
               id: lessonData.id,
             };
             setGeneratedLessonPlanId(lessonData.id);
             setGeneratedLessonContent(lessonContentWithId);
             
             // Populate form with existing data if available in parameters or content
-            const params = lessonData.parameters as any;
-            const content = lessonData.content as LessonContent;
+            const params = lessonData.parameters as any; // Assuming parameters can be anything
+            // const content = lessonData.content as unknown as LessonContent; // Already processed above
             form.reset({
-              grade: params?.grade || content?.grade || '',
-              date: params?.date ? new Date(params.date) : (content?.date ? new Date(content.date) : new Date()),
-              subject: params?.subject || content?.subject || '',
-              themeOfWeek: params?.themeOfWeek || content?.themeOfWeek || '',
-              notes: params?.notes || '',
-              assessmentType: params?.assessmentType || content?.assessmentType || undefined,
-              learnerLevel: params?.learnerLevel || content?.learnerLevel || undefined,
+              grade: params?.grade || lessonContentWithId?.grade || '',
+              date: params?.date ? new Date(params.date) : (lessonContentWithId?.date ? new Date(lessonContentWithId.date) : new Date()),
+              subject: params?.subject || '', // Subject comes from parameters, not directly content for form
+              themeOfWeek: params?.themeOfWeek || lessonContentWithId?.themeOfWeek || '',
+              notes: params?.notes || '', // Assuming notes might be in parameters
+              assessmentType: params?.assessmentType || lessonContentWithId?.assessmentType || undefined,
+              learnerLevel: params?.learnerLevel || lessonContentWithId?.learnerLevel || undefined,
             });
 
             // Fetch associated quiz
-            const { data: quizData, error: quizError } = await supabase
+            const { data: quizDataRaw, error: quizError } = await supabase
               .from('quizzes')
-              .select('*')
+              .select('*') // Fetches all columns, content will be Json
               .eq('plan_id', planIdFromUrl)
               .maybeSingle();
 
             if (quizError) console.warn("Error fetching quiz:", quizError.message);
-            if (quizData) {
-              setGeneratedQuiz(quizData as Quiz);
+            if (quizDataRaw) {
+              const quizDataTyped: Quiz = {
+                id: quizDataRaw.id,
+                plan_id: quizDataRaw.plan_id,
+                content: quizDataRaw.content as unknown as QuizQuestion[],
+                parameters: quizDataRaw.parameters as unknown as Quiz['parameters'], // Cast parameters if needed
+                created_at: quizDataRaw.created_at,
+              };
+              setGeneratedQuiz(quizDataTyped);
               setActiveTab("quiz");
             } else {
               setActiveTab("lesson-plan");
@@ -175,7 +184,7 @@ const NewLessonPage = () => {
       setGeneratedLessonPlanId(null);
       setGeneratedLessonContent(null);
       setGeneratedQuiz(null);
-      form.reset(form.formState.defaultValues);
+      form.reset(form.formState.defaultValues); // Reset to initial default values
       setActiveTab("lesson-plan");
     }
   }, [location.search, user, form, toast, navigate]);
@@ -276,6 +285,7 @@ const NewLessonPage = () => {
       id: quizAPIData.quizId,
       plan_id: quizAPIData.planId,
       content: quizAPIData.content,
+      // Ensure parameters and created_at are handled if they are part of your Quiz type and come from API
     };
     setGeneratedQuiz(newQuiz);
     setActiveTab("quiz");
@@ -283,7 +293,11 @@ const NewLessonPage = () => {
   };
 
   const handleQuizSaved = (updatedQuiz: Quiz) => {
-    setGeneratedQuiz(updatedQuiz);
+    // Ensure the content is correctly typed if it comes from a raw DB response
+    setGeneratedQuiz({
+      ...updatedQuiz,
+      content: updatedQuiz.content as QuizQuestion[]
+    });
   };
 
   return (
@@ -548,7 +562,7 @@ const NewLessonPage = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="lesson-plan">Lesson Plan</TabsTrigger>
-              <TabsTrigger value="quiz" disabled={!generatedQuiz && !isGeneratingPreview}>Quiz</TabsTrigger>
+              <TabsTrigger value="quiz" disabled={!generatedQuiz && !(isGeneratingPreview && activeTab === 'quiz') }>Quiz</TabsTrigger>
             </TabsList>
             <TabsContent value="lesson-plan">
               <LessonPreview 
@@ -559,7 +573,7 @@ const NewLessonPage = () => {
               />
             </TabsContent>
             <TabsContent value="quiz">
-              {isGeneratingPreview && !generatedQuiz ? (
+              {isGeneratingPreview && !generatedQuiz && activeTab === 'quiz' ? (
                 <div className="flex justify-center items-center h-64">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="ml-2 text-muted-foreground">Loading Quiz...</p>

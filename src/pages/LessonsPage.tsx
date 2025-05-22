@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,11 +8,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Edit3 } from 'lucide-react';
 import { LessonContent } from '@/types/lesson'; // For typing content.lessonTopic
+import { Json } from '@/integrations/supabase/types'; // Import Json type
 
 interface LessonPlanRecord {
   id: string;
-  content: LessonContent; // Assuming content has at least lessonTopic
-  parameters: any; // Or a more specific type if known
+  content: LessonContent; 
+  parameters: Json; // Keep as Json or specify if known
   created_at: string;
   updated_at: string;
 }
@@ -30,7 +30,12 @@ const fetchLessonPlans = async (userId: string | undefined): Promise<LessonPlanR
     console.error('Error fetching lesson plans:', error);
     throw new Error(error.message);
   }
-  return data || [];
+  // Cast content to LessonContent
+  return (data || []).map(plan => ({
+    ...plan,
+    content: plan.content as unknown as LessonContent,
+    parameters: plan.parameters, // No change needed if it's already Json or specific type matching parameters
+  })) as LessonPlanRecord[];
 };
 
 const LessonsPage = () => {
@@ -95,16 +100,16 @@ const LessonsPage = () => {
           {lessonPlans.map((plan) => (
             <Card key={plan.id} className="flex flex-col">
               <CardHeader>
-                <CardTitle className="truncate">{plan.content?.lessonTopic || 'Untitled Lesson'}</CardTitle>
+                <CardTitle className="truncate">{(plan.content as LessonContent)?.lessonTopic || 'Untitled Lesson'}</CardTitle>
                 <CardDescription>
                   Created: {new Date(plan.created_at).toLocaleDateString()}
-                  {plan.parameters?.subject && ` | Subject: ${plan.parameters.subject}`}
-                  {plan.parameters?.grade && ` | Grade: ${plan.parameters.grade}`}
+                  {plan.parameters && (plan.parameters as any)?.subject && ` | Subject: ${(plan.parameters as any).subject}`}
+                  {plan.parameters && (plan.parameters as any)?.grade && ` | Grade: ${(plan.parameters as any).grade}`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-sm text-muted-foreground line-clamp-3">
-                  {plan.content?.learningObjective || 'No learning objective specified.'}
+                  {(plan.content as LessonContent)?.learningObjective || 'No learning objective specified.'}
                 </p>
               </CardContent>
               <CardFooter>

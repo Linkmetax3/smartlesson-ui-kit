@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,13 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Quiz, QuizQuestion } from '@/types/quiz'; // Use Quiz type
+import { Quiz, QuizQuestion } from '@/types/quiz'; 
 import { Loader2, Edit3, Trash2, PlusCircle } from 'lucide-react';
 import { produce } from 'immer';
+import { Json } from '@/integrations/supabase/types'; // Import Json type
 
 interface QuizTabProps {
-  quizData: Quiz | null; // Updated to use Quiz type from quiz.ts
-  onQuizSaved: (updatedQuiz: Quiz) => void; // Callback when quiz is saved
+  quizData: Quiz | null;
+  onQuizSaved: (updatedQuiz: Quiz) => void; 
 }
 
 export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQuizSaved }) => {
@@ -23,7 +23,14 @@ export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQ
   const { toast } = useToast();
 
   useEffect(() => {
-    setQuiz(initialQuizData);
+    if (initialQuizData) {
+      setQuiz({
+        ...initialQuizData,
+        content: initialQuizData.content as QuizQuestion[],
+      });
+    } else {
+      setQuiz(null);
+    }
   }, [initialQuizData]);
 
   const handleQuestionChange = (index: number, field: keyof QuizQuestion, value: string | string[]) => {
@@ -59,8 +66,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQ
   const removeChoice = (qIndex: number, cIndex: number) => {
     setQuiz(
       produce((draft) => {
-        if (draft && draft.content[qIndex] && draft.content[qIndex].choices.length > 1) { // Keep at least one choice
-          // Also check if this choice is the answer, if so, clear answer or set to first choice
+        if (draft && draft.content[qIndex] && draft.content[qIndex].choices.length > 1) { 
           const currentAnswer = draft.content[qIndex].answer;
           const choiceToRemove = draft.content[qIndex].choices[cIndex];
           if (currentAnswer === choiceToRemove) {
@@ -72,7 +78,6 @@ export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQ
     );
   };
 
-
   const handleSaveQuiz = async () => {
     if (!quiz || !quiz.id) {
       toast({ variant: 'destructive', title: 'Error', description: 'No quiz data to save.' });
@@ -82,7 +87,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQ
     try {
       const { data, error } = await supabase
         .from('quizzes')
-        .update({ content: quiz.content })
+        .update({ content: quiz.content as unknown as Json })
         .eq('id', quiz.id)
         .select()
         .single();
@@ -91,8 +96,13 @@ export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQ
 
       if (data) {
         toast({ title: 'Success!', description: 'Quiz saved successfully.' });
-        onQuizSaved(data as Quiz); // Pass the updated quiz data back
-        setEditingQuestionIndex(null); // Exit edit mode for all questions
+        const updatedQuizFromDB: Quiz = {
+          ...data,
+          content: data.content as unknown as QuizQuestion[],
+          parameters: data.parameters as unknown as Quiz['parameters'], // Cast parameters if present and typed
+        };
+        onQuizSaved(updatedQuizFromDB); 
+        setEditingQuestionIndex(null); 
       }
     } catch (error: any) {
       console.error('Error saving quiz:', error);
@@ -181,7 +191,6 @@ export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQ
                   </div>
                 ))}
               </RadioGroup>
-               {/* Correct answer display can be enhanced, here just showing it via green text */}
             </div>
           )}
         </div>
@@ -201,4 +210,3 @@ export const QuizTab: React.FC<QuizTabProps> = ({ quizData: initialQuizData, onQ
     </div>
   );
 };
-
