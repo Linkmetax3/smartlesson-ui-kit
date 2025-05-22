@@ -26,8 +26,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, XIcon } from 'lucide-react'; // Added XIcon
-import { Badge } from "@/components/ui/badge"; // Added Badge
+import { Check, ChevronsUpDown, XIcon } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const subjectList = [
   { value: "Mathematics", label: "Mathematics" },
@@ -58,7 +59,7 @@ const profileFormSchema = z.object({
 export type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 interface ProfileFormProps {
-  onSubmit: (data: ProfileFormValues) => void; // Add onSubmit prop back
+  onSubmit: (data: ProfileFormValues) => void;
   isSubmitting: boolean;
   initialProfileRole?: string;
 }

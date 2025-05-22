@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,7 +35,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { DatePicker } from '@/components/ui/date-picker'; // Assuming a DatePicker component exists or will be created
+import { DatePicker } from '@/components/ui/date-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -207,8 +206,7 @@ const NewLessonPage = () => {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <DatePicker // Using a generic name for a Shadcn-like DatePicker
-                          mode="single"
+                        <DatePicker 
                           selected={field.value}
                           onSelect={field.onChange}
                           disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1))} // allow today and future
@@ -415,4 +413,3 @@ const NewLessonPage = () => {
 };
 
 export default NewLessonPage;
-
