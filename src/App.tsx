@@ -3,17 +3,32 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import MainLayout from "./components/layout/MainLayout"; // Import MainLayout
+import MainLayout from "./components/layout/MainLayout";
+import AuthGuard from "./components/auth/AuthGuard"; // Added import
 
-const queryClient = new QueryClient();
+// Public Pages
+import SignInPage from "./pages/SignInPage";
+import SignUpPage from "./pages/SignUpPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
-// Placeholder pages for navigation
-const CoursesPage = () => <div className="text-center"><h1 className="text-3xl font-bold">Courses Page</h1><p>Content for courses will go here.</p></div>;
+// Protected Pages
+import ProfilePage from "./pages/ProfilePage";
+import LessonsPage from "./pages/LessonsPage"; // Renamed from CoursesPage
+import NewLessonPage from "./pages/NewLessonPage";
+import QuizzesPage from "./pages/QuizzesPage";
+import ResourcesPage from "./pages/ResourcesPage";
+import CalendarPage from "./pages/CalendarPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+
+// Settings Page (already existed, now explicitly protected)
 const SettingsPage = () => <div className="text-center"><h1 className="text-3xl font-bold">Settings Page</h1><p>User settings will be managed here.</p></div>;
 
+
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -22,11 +37,34 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route element={<MainLayout />}> {/* Wrap routes with MainLayout */}
-            <Route path="/" element={<Index />} />
-            <Route path="/courses" element={<CoursesPage />} />
+          {/* Public routes */}
+          <Route path="/signin" element={<SignInPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+          {/* Protected routes wrapped by MainLayout and AuthGuard */}
+          <Route 
+            element={
+              <AuthGuard>
+                <MainLayout />
+              </AuthGuard>
+            }
+          >
+            <Route path="/" element={<Index />} /> {/* Dashboard */}
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/lessons" element={<LessonsPage />} />
+            <Route path="/lessons/new" element={<NewLessonPage />} />
+            <Route path="/quizzes" element={<QuizzesPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            
+            {/* Redirect /courses to /lessons if needed, or remove if /lessons is the replacement */}
+            <Route path="/courses" element={<Navigate to="/lessons" replace />} />
+
+            {/* Catch-all for authenticated space */}
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

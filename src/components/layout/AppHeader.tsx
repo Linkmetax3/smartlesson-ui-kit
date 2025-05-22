@@ -1,6 +1,7 @@
 import React from 'react';
 import AppLogo from './AppLogo';
 import UserAvatar from './UserAvatar';
+import SyncStatusIndicator from '../ui/SyncStatusIndicator'; // Added import
 import { SidebarTrigger } from "@/components/ui/sidebar"; // From shadcn/ui
 import { Menu } from 'lucide-react';
 
@@ -13,16 +14,13 @@ const AppHeader = () => {
             <Menu className="h-6 w-6" />
             <span className="sr-only">Toggle Menu</span>
           </SidebarTrigger>
-          {/* Logo is part of sidebar header, but for mobile header visibility or different desktop header design */}
-          {/* For now, keeping it simple. The sidebar trigger is the main element here for mobile. */}
-          {/* On desktop, the sidebar is always visible or collapsible independently */}
           <div className="hidden lg:block">
             {/* Potentially a breadcrumb or page title here */}
           </div>
         </div>
         
         <div className="flex items-center space-x-4">
-          {/* Add any header actions here: notifications, search, etc. */}
+          <SyncStatusIndicator /> {/* Added SyncStatusIndicator */}
           <UserAvatar />
         </div>
       </div>
